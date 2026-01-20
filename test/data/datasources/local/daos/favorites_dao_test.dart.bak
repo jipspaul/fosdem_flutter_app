@@ -1,0 +1,82 @@
+import 'package:flutter_test/flutter_test.dart' hide isNotNull, isNull;
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
+import 'package:fosdem_flutter/data/datasources/local/database.dart';
+
+AppDatabase createTestDatabase() {
+  return AppDatabase.test(NativeDatabase.memory());
+}
+
+void main() {
+  late AppDatabase database;
+
+  setUp(() {
+    database = createTestDatabase();
+  });
+
+  tearDown(() async {
+    await database.close();
+  });
+
+  group('FavoritesDao -', () {
+    test('addFavorite and isFavorite works', () async {
+      await database.favoritesDao.addFavorite(1);
+      final isFav = await database.favoritesDao.isFavorite(1);
+      expect(isFav, true);
+    });
+
+    test('removeFavorite works', () async {
+      await database.favoritesDao.addFavorite(1);
+      expect(await database.favoritesDao.isFavorite(1), true);
+      
+      await database.favoritesDao.removeFavorite(1);
+      expect(await database.favoritesDao.isFavorite(1), false);
+    });
+
+    test('toggleFavorite adds when not favorite', () async {
+      expect(await database.favoritesDao.isFavorite(1), false);
+      
+      await database.favoritesDao.toggleFavorite(1);
+      expect(await database.favoritesDao.isFavorite(1), true);
+    });
+
+    test('toggleFavorite removes when favorite', () async {
+      await database.favoritesDao.addFavorite(1);
+      expect(await database.favoritesDao.isFavorite(1), true);
+      
+      await database.favoritesDao.toggleFavorite(1);
+      expect(await database.favoritesDao.isFavorite(1), false);
+    });
+
+    test('getFavoriteEventIds returns correct IDs', () async {
+      await database.favoritesDao.addFavorite(1);
+      await database.favoritesDao.addFavorite(2);
+      await database.favoritesDao.addFavorite(3);
+
+      final ids = await database.favoritesDao.getFavoriteEventIds();
+      expect(ids.length, 3);
+      expect(ids, containsAll([1, 2, 3]));
+    });
+
+    test('getAllFavorites returns all favorites', () async {
+      await database.favoritesDao.addFavorite(1);
+      await database.favoritesDao.addFavorite(2);
+
+      final favorites = await database.favoritesDao.getAllFavorites();
+      expect(favorites.length, 2);
+    });
+
+    test('user-specific favorites work', () async {
+      await database.favoritesDao.addFavorite(1, userId: 'user1');
+      await database.favoritesDao.addFavorite(2, userId: 'user2');
+
+      final user1Favs = await database.favoritesDao.getAllFavorites(userId: 'user1');
+      final user2Favs = await database.favoritesDao.getAllFavorites(userId: 'user2');
+
+      expect(user1Favs.length, 1);
+      expect(user2Favs.length, 1);
+      expect(user1Favs[0].eventId, 1);
+      expect(user2Favs[0].eventId, 2);
+    });
+  });
+}

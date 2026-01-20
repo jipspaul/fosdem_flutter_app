@@ -1,0 +1,22 @@
+{
+  "name": "fosdem_flutter",
+  "version": "1.0.0",
+  "description": "A Flutter application for the FOSDEM conference, featuring event schedules, maps, videos, and more.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  }
+}

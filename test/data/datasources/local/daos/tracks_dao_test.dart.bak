@@ -1,0 +1,90 @@
+import 'package:flutter_test/flutter_test.dart' hide isNotNull, isNull;
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
+import 'package:fosdem_flutter/data/datasources/local/database.dart';
+
+AppDatabase createTestDatabase() {
+  return AppDatabase.test(NativeDatabase.memory());
+}
+
+void main() {
+  late AppDatabase database;
+
+  setUp(() {
+    database = createTestDatabase();
+  });
+
+  tearDown(() async {
+    await database.close();
+  });
+
+  group('TracksDao -', () {
+    test('insertTrack and getTrackByName works', () async {
+      final track = TracksCompanion(
+        name: const Value('Mobile Development'),
+        day: const Value(1),
+        date: Value(DateTime(2025, 2, 1)),
+        colorHex: const Value('#FF0000'),
+      );
+
+      await database.tracksDao.insertTrack(track);
+      final retrieved = await database.tracksDao.getTrackByName('Mobile Development');
+
+      expect(retrieved, isNotNull);
+      expect(retrieved!.name, 'Mobile Development');
+      expect(retrieved.day, 1);
+      expect(retrieved.colorHex, '#FF0000');
+    });
+
+    test('getAllTracks returns all tracks', () async {
+      final tracks = [
+        const TracksCompanion(
+          name: Value('Mobile'),
+          day: Value(1),
+        ),
+        const TracksCompanion(
+          name: Value('Web'),
+          day: Value(2),
+        ),
+      ];
+
+      await database.tracksDao.insertTracks(tracks);
+      final retrieved = await database.tracksDao.getAllTracks();
+
+      expect(retrieved.length, 2);
+    });
+
+    test('getTracksByDate filters correctly', () async {
+      final date1 = DateTime(2025, 2, 1);
+      final date2 = DateTime(2025, 2, 2);
+
+      final tracks = [
+        TracksCompanion(
+          name: const Value('Track 1'),
+          date: Value(date1),
+        ),
+        TracksCompanion(
+          name: const Value('Track 2'),
+          date: Value(date2),
+        ),
+      ];
+
+      await database.tracksDao.insertTracks(tracks);
+      final day1Tracks = await database.tracksDao.getTracksByDate(date1);
+
+      expect(day1Tracks.length, 1);
+      expect(day1Tracks[0].name, 'Track 1');
+    });
+
+    test('deleteTrack removes track', () async {
+      final track = const TracksCompanion(
+        name: Value('Test Track'),
+      );
+
+      await database.tracksDao.insertTrack(track);
+      await database.tracksDao.deleteTrack('Test Track');
+
+      expect(await database.tracksDao.getTrackByName('Test Track'), isNull);
+    });
+  });
+}

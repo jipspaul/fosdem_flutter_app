@@ -1,0 +1,80 @@
+{
+  "blueprints": [
+    {
+      "imageName": "k1-1",
+      "title": "Building K - Level 1 (1)"
+    },
+    {
+      "imageName": "k1-2",
+      "title": "Building K - Level 1 (2)"
+    },
+    {
+      "imageName": "k2",
+      "title": "Building K - Level 2"
+    },
+    {
+      "imageName": "k3",
+      "title": "Building K - Level 3"
+    },
+    {
+      "imageName": "k4",
+      "title": "Building K - Level 4"
+    }
+  ],
+  "coordinate": {
+    "latitude": 50.814769127784814,
+    "longitude": 4.3817875546664595
+  },
+  "polygon": [
+    {
+      "latitude" : 50.814908326642239,
+      "longitude" : 4.3814231109198261
+    },
+    {
+      "latitude" : 50.814918355151974,
+      "longitude" : 4.3814223824716407
+    },
+    {
+      "latitude" : 50.814926097368328,
+      "longitude" : 4.3814320605011687
+    },
+    {
+      "latitude" : 50.815039652703604,
+      "longitude" : 4.3818036775757605
+    },
+    {
+      "latitude" : 50.815040759172945,
+      "longitude" : 4.3818216006289674
+    },
+    {
+      "latitude" : 50.8150342026359,
+      "longitude" : 4.3818320912565127
+    },
+    {
+      "latitude" : 50.814589306421652,
+      "longitude" : 4.3821718191569801
+    },
+    {
+      "latitude" : 50.814578835225859,
+      "longitude" : 4.3821729659432833
+    },
+    {
+      "latitude" : 50.814571420892861,
+      "longitude" : 4.3821629076666682
+    },
+    {
+      "latitude" : 50.814457731405952,
+      "longitude" : 4.381790282617203
+    },
+    {
+      "latitude" : 50.814456460374259,
+      "longitude" : 4.3817738540986113
+    },
+    {
+      "latitude" : 50.814463451048283,
+      "longitude" : 4.3817611136149708
+    }
+  ]
+,
+  "title": "K"
+}
