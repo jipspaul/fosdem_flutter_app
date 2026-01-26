@@ -341,14 +341,14 @@ void main() {
 
       await database.eventsDao.upsertEvent(event);
       
-      var retrieved = await database.eventsDao.getEventById(1);
+      var retrieved = await database.eventsDao.getEventById('1');
       expect(retrieved!.title, 'Original Title');
 
       // Update
       final updated = retrieved.copyWith(title: 'Updated Title');
       await database.eventsDao.updateEvent(updated);
 
-      retrieved = await database.eventsDao.getEventById(1);
+      retrieved = await database.eventsDao.getEventById('1');
       expect(retrieved!.title, 'Updated Title');
     });
 

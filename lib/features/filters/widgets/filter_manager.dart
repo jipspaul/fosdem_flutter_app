@@ -166,6 +166,10 @@ class FilterManager extends StatelessWidget {
         return Icons.timer;
       case FilterType.favorites:
         return Icons.favorite;
+      case FilterType.dayTimeBlock:
+        return Icons.schedule;
+      case FilterType.nextHours:
+        return Icons.schedule;
     }
   }
 }

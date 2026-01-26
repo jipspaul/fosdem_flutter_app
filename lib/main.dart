@@ -15,6 +15,7 @@ import 'presentation/screens/map_screen.dart';
 import 'presentation/screens/settings_screen.dart';
 import 'data/services/data_loading_service.dart';
 import 'data/datasources/local/database.dart';
+import 'data/repositories/settings_repository.dart';
 import 'features/filters/bloc/filter_bloc.dart';
 import 'features/filters/services/filter_persistence_service.dart';
 import 'features/journey/presentation/bloc/journey_bloc.dart';
@@ -37,8 +38,14 @@ void main() async {
   await notificationService.initialize();
   await notificationService.requestPermissions();
   
+  // Initialize background tasks for workmanager
+  await notificationService.initializeBackgroundTasks();
+  
   // Load initial data from bundled xcal
   await _loadInitialData();
+  
+  // Check for xCal updates on startup
+  await _checkForXCalUpdates();
   
   runApp(const MyApp());
 }
@@ -98,6 +105,39 @@ Future<void> _loadInitialData() async {
     print('❌ Error loading initial data: $e');
     print('Stack trace: $stackTrace');
     // Continue anyway - app will show empty state or user can load from URL
+  }
+}
+
+Future<void> _checkForXCalUpdates() async {
+  try {
+    print('🔍 Checking for xCal updates on startup...');
+    final settingsRepository = di.sl<SettingsRepository>();
+    final dataLoadingService = di.sl<DataLoadingService>();
+    
+    // Load settings to get xCal URL
+    final settings = await settingsRepository.loadSettings();
+    final xcalUrl = settings.xcalUrl;
+    
+    // Only check if URL is configured and not empty
+    if (xcalUrl.isEmpty) {
+      print('ℹ️  No xCal URL configured, skipping update check');
+      return;
+    }
+    
+    print('📡 Checking xCal URL: $xcalUrl');
+    
+    // Check for changes and update if needed
+    final hasUpdated = await dataLoadingService.checkAndUpdateIfChanged(xcalUrl);
+    
+    if (hasUpdated) {
+      print('✅ xCal updates detected and applied on startup');
+    } else {
+      print('✅ No xCal updates available - database is up to date');
+    }
+  } catch (e, stackTrace) {
+    print('⚠️  Error checking for xCal updates on startup: $e');
+    print('Stack trace: $stackTrace');
+    // Don't block app startup on update check failure
   }
 }
 

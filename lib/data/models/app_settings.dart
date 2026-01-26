@@ -7,6 +7,7 @@ class AppSettings extends Equatable {
   final int reminderMinutesBefore;
   final bool autoSync;
   final String language;
+  final String xcalUrl;
 
   const AppSettings({
     this.themeMode = ThemeMode.system,
@@ -14,6 +15,7 @@ class AppSettings extends Equatable {
     this.reminderMinutesBefore = 15,
     this.autoSync = true,
     this.language = 'en',
+    this.xcalUrl = 'https://fosdem.org/2026/schedule/xcal',
   });
 
   AppSettings copyWith({
@@ -22,6 +24,7 @@ class AppSettings extends Equatable {
     int? reminderMinutesBefore,
     bool? autoSync,
     String? language,
+    String? xcalUrl,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -30,6 +33,7 @@ class AppSettings extends Equatable {
           reminderMinutesBefore ?? this.reminderMinutesBefore,
       autoSync: autoSync ?? this.autoSync,
       language: language ?? this.language,
+      xcalUrl: xcalUrl ?? this.xcalUrl,
     );
   }
 
@@ -40,6 +44,7 @@ class AppSettings extends Equatable {
       'reminderMinutesBefore': reminderMinutesBefore,
       'autoSync': autoSync,
       'language': language,
+      'xcalUrl': xcalUrl,
     };
   }
 
@@ -50,6 +55,7 @@ class AppSettings extends Equatable {
       reminderMinutesBefore: json['reminderMinutesBefore'] as int? ?? 15,
       autoSync: json['autoSync'] as bool? ?? true,
       language: json['language'] as String? ?? 'en',
+      xcalUrl: json['xcalUrl'] as String? ?? 'https://fosdem.org/2026/schedule/xcal',
     );
   }
 
@@ -60,6 +66,7 @@ class AppSettings extends Equatable {
         reminderMinutesBefore,
         autoSync,
         language,
+        xcalUrl,
       ];
 }
 

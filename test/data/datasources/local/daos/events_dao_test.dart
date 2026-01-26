@@ -34,7 +34,7 @@ void main() {
       );
 
       await database.eventsDao.upsertEvent(event);
-      final retrieved = await database.eventsDao.getEventById(1);
+      final retrieved = await database.eventsDao.getEventById('1');
 
       expect(retrieved, isNotNull);
       expect(retrieved!.title, 'Test Event');
@@ -128,7 +128,7 @@ void main() {
       await database.eventsDao.upsertEvent(event);
       await database.eventsDao.toggleFavorite(1, true);
       
-      var retrieved = await database.eventsDao.getEventById(1);
+      var retrieved = await database.eventsDao.getEventById('1');
       expect(retrieved!.isFavorite, true);
     });
 
@@ -149,7 +149,7 @@ void main() {
       await database.eventsDao.upsertEvent(event);
       await database.eventsDao.deleteEvent(1);
       
-      expect(await database.eventsDao.getEventById(1), isNull);
+      expect(await database.eventsDao.getEventById('1'), isNull);
     });
   });
 }

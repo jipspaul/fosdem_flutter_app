@@ -111,7 +111,7 @@ extension AttachmentEntityX on entity.Attachment {
 
 // Event Mappers
 extension EventModelX on EventModel {
-  Event toEntity() {
+  Event toEntity({bool isSync = false}) {
     return Event(
       id: id,
       title: title,
@@ -127,6 +127,7 @@ extension EventModelX on EventModel {
       people: people.map((p) => p.toEntity()).toList(),
       links: links.map((l) => l.toEntity()).toList(),
       attachments: attachments.map((a) => a.toEntity()).toList(),
+      isSync: isSync,
     );
   }
 }
@@ -231,7 +232,7 @@ extension BuildingEntityX on Building {
 
 // List Extensions
 extension EventModelListX on List<EventModel> {
-  List<Event> toEntities() => map((e) => e.toEntity()).toList();
+  List<Event> toEntities({bool isSync = false}) => map((e) => e.toEntity(isSync: isSync)).toList();
 }
 
 extension EventEntityListX on List<Event> {

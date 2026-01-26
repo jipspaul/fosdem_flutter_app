@@ -36,7 +36,7 @@ void main() {
     print('Inserted event ID: $eventId');
 
     // Check if event exists
-    final event = await database.eventsDao.getEventById(1);
+    final event = await database.eventsDao.getEventById('1');
     print('Event retrieved: ${event?.title}, isFavorite: ${event?.isFavorite}');
 
     // Add to favorites
@@ -45,7 +45,7 @@ void main() {
     );
 
     // Check if favorite was saved
-    final updatedEvent = await database.eventsDao.getEventById(1);
+    final updatedEvent = await database.eventsDao.getEventById('1');
     print('After update - isFavorite: ${updatedEvent?.isFavorite}');
 
     // Get all favorites

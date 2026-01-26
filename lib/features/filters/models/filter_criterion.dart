@@ -277,3 +277,140 @@ class FavoritesCriterion extends FilterCriterion {
   @override
   List<Object?> get props => [onlyFavorites];
 }
+
+/// Next hours filter criterion
+/// Shows events starting within the next N hours from current time
+class NextHoursCriterion extends FilterCriterion {
+  final int hours;
+
+  const NextHoursCriterion({this.hours = 2});
+
+  @override
+  bool matches(dynamic event) {
+    final now = DateTime.now();
+    final endTime = now.add(Duration(hours: hours));
+    
+    // Handle different event types
+    DateTime? eventStart;
+    if (event.start != null) {
+      eventStart = event.start as DateTime;
+    } else if (event.startTime != null) {
+      eventStart = event.startTime as DateTime;
+    } else {
+      return false; // Cannot determine event time
+    }
+    
+    // Check if event starts between now and end time
+    // Include events that have already started but are still within the time window
+    return eventStart.isAfter(now.subtract(const Duration(minutes: 1))) && 
+           eventStart.isBefore(endTime.add(const Duration(minutes: 1)));
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'nextHours',
+    'hours': hours,
+  };
+
+  factory NextHoursCriterion.fromJson(Map<String, dynamic> json) => NextHoursCriterion(
+    hours: json['hours'] as int? ?? 2,
+  );
+
+  @override
+  String getLabel() => hours == 2 ? 'Next 2 hours' : 'Next $hours hours';
+
+  @override
+  List<Object?> get props => [hours];
+}
+
+/// Day and time block filter criterion
+/// Combines day (Saturday/Sunday) with time block (before/after 12h)
+class DayTimeBlockCriterion extends FilterCriterion {
+  final Set<String> selectedBlocks; // e.g., ['saturday_before', 'sunday_after']
+
+  const DayTimeBlockCriterion({required this.selectedBlocks});
+
+  @override
+  bool matches(dynamic event) {
+    if (selectedBlocks.isEmpty) return true;
+    
+    // Handle different event types
+    DateTime eventStart;
+    if (event.start != null) {
+      eventStart = event.start as DateTime;
+    } else if (event.startTime != null) {
+      eventStart = event.startTime as DateTime;
+    } else {
+      return false; // Cannot determine event time
+    }
+    
+    final weekday = eventStart.weekday;
+    final hour = eventStart.hour;
+    
+    // Check if event matches any selected block
+    for (final block in selectedBlocks) {
+      if (_matchesBlock(block, weekday, hour)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  bool _matchesBlock(String block, int weekday, int hour) {
+    final isSaturday = weekday == DateTime.saturday;
+    final isSunday = weekday == DateTime.sunday;
+    final isBefore12 = hour < 12;
+    final isAfter12 = hour >= 12;
+    
+    switch (block) {
+      case 'saturday_before':
+        return isSaturday && isBefore12;
+      case 'saturday_after':
+        return isSaturday && isAfter12;
+      case 'sunday_before':
+        return isSunday && isBefore12;
+      case 'sunday_after':
+        return isSunday && isAfter12;
+      default:
+        return false;
+    }
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'dayTimeBlock',
+    'selectedBlocks': selectedBlocks.toList(),
+  };
+
+  factory DayTimeBlockCriterion.fromJson(Map<String, dynamic> json) => DayTimeBlockCriterion(
+    selectedBlocks: (json['selectedBlocks'] as List?)?.cast<String>().toSet() ?? {},
+  );
+
+  @override
+  String getLabel() {
+    if (selectedBlocks.isEmpty) return 'Any time';
+    if (selectedBlocks.length == 1) {
+      return _getBlockLabel(selectedBlocks.first);
+    }
+    return '${selectedBlocks.length} time blocks';
+  }
+
+  String _getBlockLabel(String block) {
+    switch (block) {
+      case 'saturday_before':
+        return 'Saturday before 12h';
+      case 'saturday_after':
+        return 'Saturday after 12h';
+      case 'sunday_before':
+        return 'Sunday before 12h';
+      case 'sunday_after':
+        return 'Sunday after 12h';
+      default:
+        return block;
+    }
+  }
+
+  @override
+  List<Object?> get props => [selectedBlocks];
+}

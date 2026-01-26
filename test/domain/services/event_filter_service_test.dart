@@ -31,6 +31,7 @@ void main() {
         people: const [Person(id: 1, name: 'John Doe')],
         links: const [Link(url: 'https://video.fosdem.org/test', title: 'Video', isVideo: true)],
         attachments: const [],
+        isSync: false,
       ),
       Event(
         id: 2,
@@ -44,6 +45,7 @@ void main() {
         people: const [Person(id: 2, name: 'Jane Smith')],
         links: const [],
         attachments: const [Attachment(url: 'slides.pdf', title: 'Slides', type: AttachmentType.slides)],
+        isSync: false,
       ),
       Event(
         id: 3,
@@ -56,6 +58,7 @@ void main() {
         people: const [Person(id: 3, name: 'Bob Johnson')],
         links: const [],
         attachments: const [],
+        isSync: false,
       ),
     ];
   });

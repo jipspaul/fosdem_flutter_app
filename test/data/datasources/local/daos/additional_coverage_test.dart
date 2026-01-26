@@ -86,7 +86,14 @@ void main() {
       expect(track!.colorHex, '#FF0000');
 
       // Update
-      final updated = track.copyWith(colorHex: '#00FF00');
+      final updated = TrackEntity(
+        name: track.name,
+        type: track.type,
+        day: track.day,
+        date: track.date,
+        colorHex: '#00FF00',
+        description: track.description,
+      );
       await database.tracksDao.updateTrack(updated);
 
       track = await database.tracksDao.getTrackByName('Original Track');
@@ -134,7 +141,11 @@ void main() {
       expect(person!.bio, 'Original bio');
 
       // Update
-      final updated = person.copyWith(bio: 'Updated bio');
+      final updated = PersonEntity(
+        id: person.id,
+        name: person.name,
+        bio: 'Updated bio',
+      );
       await database.peopleDao.updatePerson(updated);
 
       person = await database.peopleDao.getPersonById(id);

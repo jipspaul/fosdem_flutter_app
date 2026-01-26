@@ -54,6 +54,12 @@ class SettingsRepository {
     await saveSettings(settings.copyWith(autoSync: enabled));
   }
 
+  /// Update xCal URL
+  Future<void> updateXCalUrl(String url) async {
+    final settings = await loadSettings();
+    await saveSettings(settings.copyWith(xcalUrl: url));
+  }
+
   /// Clear all settings
   Future<void> clearSettings() async {
     await _prefs.remove(_settingsKey);

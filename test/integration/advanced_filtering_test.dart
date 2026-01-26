@@ -4,6 +4,8 @@ import 'package:fosdem_flutter/features/filters/models/filter_criterion.dart';
 import 'package:fosdem_flutter/features/filters/bloc/filter_bloc.dart';
 import 'package:fosdem_flutter/features/filters/services/filter_persistence_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fosdem_flutter/data/datasources/local/database.dart';
+import 'package:drift/native.dart';
 
 // Mock Event class for testing
 class MockEvent {
@@ -32,12 +34,17 @@ void main() {
   group('Advanced Filtering Integration Tests', () {
     late FilterBloc filterBloc;
     late FilterPersistenceService persistenceService;
+    late AppDatabase database;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       persistenceService = FilterPersistenceService(prefs);
-      filterBloc = FilterBloc(persistenceService: persistenceService);
+      database = AppDatabase.test(NativeDatabase.memory());
+      filterBloc = FilterBloc(
+        persistenceService: persistenceService,
+        database: database,
+      );
     });
 
     tearDown(() {
@@ -65,20 +72,20 @@ void main() {
 
     test('Should filter events by text', () async {
       final events = [
-        const MockEvent(
+        MockEvent(
           id: 1,
           title: 'Rust Programming',
-          start: const MockDateTime(2025, 2, 1, 10, 0),
+          start: MockDateTime(2025, 2, 1, 10, 0),
           duration: Duration(hours: 1),
           room: 'K.1.105',
           track: 'Rust',
           abstract: 'Learn Rust',
           description: 'Advanced Rust programming',
         ),
-        const MockEvent(
+        MockEvent(
           id: 2,
           title: 'Python Basics',
-          start: const MockDateTime(2025, 2, 1, 11, 0),
+          start: MockDateTime(2025, 2, 1, 11, 0),
           duration: Duration(hours: 1),
           room: 'K.1.105',
           track: 'Python',
@@ -152,7 +159,10 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 100));
 
       // Create new bloc to simulate app restart
-      final newBloc = FilterBloc(persistenceService: persistenceService);
+      final newBloc = FilterBloc(
+        persistenceService: persistenceService,
+        database: database,
+      );
       newBloc.add(LoadSavedFilters());
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -167,6 +177,6 @@ void main() {
 
 // Helper class for creating DateTime in const context
 class MockDateTime extends DateTime {
-  const MockDateTime(int year, int month, int day, int hour, int minute)
+  MockDateTime(int year, int month, int day, int hour, int minute)
       : super(year, month, day, hour, minute);
 }

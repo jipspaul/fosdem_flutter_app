@@ -3,18 +3,21 @@ import 'package:flutter/services.dart';
 import '../repositories/event_repository.dart';
 import '../repositories/track_repository.dart';
 import 'xcal_parser_service.dart';
+import 'xcal_monitor_service.dart';
 
 class DataLoadingService {
   final EventRepository eventRepository;
   final TrackRepository trackRepository;
   final XCalParserService parserService;
   final Dio dio;
+  final XCalMonitorService? monitorService;
 
   DataLoadingService({
     required this.eventRepository,
     required this.trackRepository,
     required this.parserService,
     required this.dio,
+    this.monitorService,
   });
 
   /// Load initial data from bundled xcal file
@@ -94,5 +97,37 @@ class DataLoadingService {
   Future<bool> hasData() async {
     final events = await eventRepository.getAll();
     return events.isNotEmpty;
+  }
+
+  /// Check for changes and update if content has changed
+  /// Returns true if update occurred, false if no changes detected
+  /// Throws exception on error
+  Future<bool> checkAndUpdateIfChanged(String url) async {
+    if (monitorService == null) {
+      throw Exception('XCalMonitorService not available');
+    }
+
+    try {
+      print('🔍 Checking for changes in xCal URL: $url');
+      
+      // Check if content has changed
+      final hasChanged = await monitorService!.checkForChanges(url);
+      
+      if (!hasChanged) {
+        print('✅ No changes detected - database is up to date');
+        return false;
+      }
+
+      print('🔄 Changes detected - updating database...');
+      
+      // Load and update data from URL
+      await loadFromUrl(url);
+      
+      print('✅ Database updated successfully');
+      return true;
+    } catch (e) {
+      print('❌ Error checking/updating: $e');
+      rethrow;
+    }
   }
 }

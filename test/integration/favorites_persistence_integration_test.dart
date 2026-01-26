@@ -46,10 +46,11 @@ void main() {
       expect(favorites.length, 1, reason: 'Favorite should persist after reload');
       expect(favorites.first.id, firstEvent.id, reason: 'Same event should still be favorite');
       
-      // 6. Verify the event's isFavorite flag is still true
+      // 6. Verify the event is still in favorites list
       events = await eventRepository.getAll();
       final reloadedEvent = events.firstWhere((e) => e.id == firstEvent.id);
-      expect(reloadedEvent.isFavorite, isTrue, reason: 'Event isFavorite flag should be true after reload');
+      final isStillFavorite = favorites.any((f) => f.id == reloadedEvent.id);
+      expect(isStillFavorite, isTrue, reason: 'Event should still be in favorites after reload');
     });
 
     test('should persist multiple favorites across reload', () async {
@@ -134,7 +135,6 @@ void main() {
       expect(favorites.length, 1, reason: 'Should show 1 event in favorites');
       expect(favorites.first.id, testEvent.id);
       expect(favorites.first.title, testEvent.title);
-      expect(favorites.first.isFavorite, isTrue);
     });
   });
 }

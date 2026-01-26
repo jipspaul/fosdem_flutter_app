@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/filter_bloc.dart';
 import '../models/event_filter.dart';
 import '../models/filter_criterion.dart';
+import 'simple_date_filter.dart';
 
 class FilterBottomSheet extends StatelessWidget {
   const FilterBottomSheet({super.key});
@@ -71,13 +72,18 @@ class FilterBottomSheet extends StatelessWidget {
                     ),
                     ListTile(
                       leading: const Icon(Icons.calendar_today),
-                      title: const Text('Date Range'),
-                      onTap: () => _showDateRangeDialog(context),
+                      title: const Text('Date & Time'),
+                      onTap: () => _showSimpleDateFilter(context),
                     ),
                     ListTile(
                       leading: const Icon(Icons.access_time),
                       title: const Text('Time Range'),
                       onTap: () => _showTimeRangeDialog(context),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.schedule),
+                      title: const Text('Next 2 Hours'),
+                      onTap: () => _toggleNextHoursFilter(context),
                     ),
                     ListTile(
                       leading: const Icon(Icons.favorite),
@@ -256,24 +262,30 @@ class FilterBottomSheet extends StatelessWidget {
     );
   }
 
-  void _showDateRangeDialog(BuildContext context) async {
-    final range = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2025, 2, 1),
-      lastDate: DateTime(2025, 2, 2),
-    );
-    if (range != null) {
-      context.read<FilterBloc>().add(AddFilter(
-        EventFilter(
-          type: FilterType.dateRange,
-          criterion: DateRangeCriterion(
-            start: range.start,
-            end: range.end,
-          ),
-        ),
-      ));
+  void _showSimpleDateFilter(BuildContext context) {
+    // Get current selected blocks from filter state
+    Set<String>? selectedBlocks;
+    final filterState = context.read<FilterBloc>().state;
+    if (filterState is FilterApplied) {
+      try {
+        final dayTimeBlockFilter = filterState.filters.firstWhere(
+          (f) => f.type == FilterType.dayTimeBlock,
+        );
+        if (dayTimeBlockFilter.criterion is DayTimeBlockCriterion) {
+          selectedBlocks = (dayTimeBlockFilter.criterion as DayTimeBlockCriterion).selectedBlocks;
+        }
+      } catch (e) {
+        // No existing filter, selectedBlocks remains null
+        selectedBlocks = null;
+      }
     }
-    Navigator.pop(context);
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => SimpleDateFilter(
+        selectedBlocks: selectedBlocks,
+      ),
+    );
   }
 
   void _showTimeRangeDialog(BuildContext context) async {
@@ -307,6 +319,34 @@ class FilterBottomSheet extends StatelessWidget {
         ),
       ),
     ));
+    
+    Navigator.pop(context);
+  }
+
+  void _toggleNextHoursFilter(BuildContext context) {
+    final filterBloc = context.read<FilterBloc>();
+    final filterState = filterBloc.state;
+    
+    // Check if the filter already exists
+    bool filterExists = false;
+    if (filterState is FilterApplied) {
+      filterExists = filterState.filters.any(
+        (f) => f.type == FilterType.nextHours,
+      );
+    }
+    
+    if (filterExists) {
+      // Remove the filter
+      filterBloc.add(RemoveFilter(FilterType.nextHours));
+    } else {
+      // Add the filter
+      filterBloc.add(AddFilter(
+        const EventFilter(
+          type: FilterType.nextHours,
+          criterion: NextHoursCriterion(hours: 2),
+        ),
+      ));
+    }
     
     Navigator.pop(context);
   }

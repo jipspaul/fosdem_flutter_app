@@ -9,6 +9,8 @@ enum FilterType {
   timeRange,
   duration,
   favorites,
+  dayTimeBlock,
+  nextHours,
 }
 
 class EventFilter extends Equatable {
@@ -67,6 +69,12 @@ class EventFilter extends Equatable {
         break;
       case 'favorites':
         criterion = FavoritesCriterion.fromJson(criterionJson);
+        break;
+      case 'dayTimeBlock':
+        criterion = DayTimeBlockCriterion.fromJson(criterionJson);
+        break;
+      case 'nextHours':
+        criterion = NextHoursCriterion.fromJson(criterionJson);
         break;
       default:
         throw Exception('Unknown criterion type: $criterionType');

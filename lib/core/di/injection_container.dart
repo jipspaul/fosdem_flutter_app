@@ -22,6 +22,7 @@ import '../../data/repositories/settings_repository.dart';
 import '../../data/services/xcal_parser_service.dart';
 import '../../data/services/data_loading_service.dart';
 import '../../data/services/event_scraper_service.dart';
+import '../../data/services/xcal_monitor_service.dart';
 import 'package:http/http.dart' as http;
 import '../../domain/usecases/get_events_usecase.dart';
 import '../../domain/usecases/search_events_usecase.dart';
@@ -136,6 +137,14 @@ Future<void> init() async {
   // XCal Parser Service
   sl.registerLazySingleton<XCalParserService>(() => XCalParserService());
 
+  // XCal Monitor Service
+  sl.registerLazySingleton<XCalMonitorService>(
+    () => XCalMonitorService(
+      dio: sl(),
+      prefs: sl(),
+    ),
+  );
+
   // Data Loading Service
   sl.registerLazySingleton<DataLoadingService>(
     () => DataLoadingService(
@@ -143,6 +152,7 @@ Future<void> init() async {
       trackRepository: sl(),
       parserService: sl(),
       dio: sl(),
+      monitorService: sl(),
     ),
   );
 

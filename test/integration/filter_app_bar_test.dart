@@ -11,17 +11,24 @@ import 'package:fosdem_flutter/presentation/pages/favorites/favorites_page.dart'
 import 'package:fosdem_flutter/presentation/pages/events/events_page.dart';
 import 'package:fosdem_flutter/presentation/bloc/favorites/favorites_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:fosdem_flutter/data/datasources/local/database.dart';
+import 'package:drift/native.dart';
 
 void main() {
   group('Filter App Bar Integration Tests', () {
     late FilterBloc filterBloc;
     late FilterPersistenceService persistenceService;
     late SharedPreferences prefs;
+    late AppDatabase database;
 
     setUp(() async {
       prefs = await SharedPreferences.getInstance();
       persistenceService = FilterPersistenceService(prefs);
-      filterBloc = FilterBloc(persistenceService: persistenceService);
+      database = AppDatabase.test(NativeDatabase.memory());
+      filterBloc = FilterBloc(
+        persistenceService: persistenceService,
+        database: database,
+      );
     });
 
     tearDown(() {

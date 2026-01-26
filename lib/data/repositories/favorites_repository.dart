@@ -49,6 +49,7 @@ class FavoritesRepository {
       people: _parsePeople(entity.people),
       links: _parseLinks(entity.links),
       attachments: _parseAttachments(entity.attachments),
+      isSync: false,
     );
   }
 

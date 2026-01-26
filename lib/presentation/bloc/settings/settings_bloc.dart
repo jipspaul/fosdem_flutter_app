@@ -52,6 +52,15 @@ class UpdateAutoSync extends SettingsEvent {
   List<Object?> get props => [enabled];
 }
 
+class UpdateXCalUrl extends SettingsEvent {
+  final String url;
+
+  const UpdateXCalUrl(this.url);
+
+  @override
+  List<Object?> get props => [url];
+}
+
 // States
 abstract class SettingsState extends Equatable {
   const SettingsState();
@@ -98,6 +107,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<UpdateNotificationsEnabled>(_onUpdateNotificationsEnabled);
     on<UpdateReminderMinutes>(_onUpdateReminderMinutes);
     on<UpdateAutoSync>(_onUpdateAutoSync);
+    on<UpdateXCalUrl>(_onUpdateXCalUrl);
   }
 
   Future<void> _onLoadSettings(
@@ -170,6 +180,19 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       emit(SettingsLoaded(settings));
     } catch (e) {
       emit(SettingsError('Failed to update auto sync: $e'));
+    }
+  }
+
+  Future<void> _onUpdateXCalUrl(
+    UpdateXCalUrl event,
+    Emitter<SettingsState> emit,
+  ) async {
+    try {
+      await _repository.updateXCalUrl(event.url);
+      final settings = await _repository.loadSettings();
+      emit(SettingsLoaded(settings));
+    } catch (e) {
+      emit(SettingsError('Failed to update xCal URL: $e'));
     }
   }
 }

@@ -108,6 +108,9 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
         stats: stats,
         preferences: _preferences,
       ));
+      
+      // Schedule notifications for all journey items (wishlist + planned)
+      await _scheduleNotificationsForJourney();
     } catch (e, stackTrace) {
       print('DEBUG Journey: Error loading journey: $e');
       print('DEBUG Journey: Stack trace: $stackTrace');
@@ -128,6 +131,9 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
       );
 
       add(const LoadJourney());
+      
+      // Schedule notifications for all journey items (including new wishlist item)
+      await _scheduleNotificationsForJourney();
     } catch (e) {
       emit(JourneyError('Failed to add to wishlist: $e'));
     }
@@ -303,17 +309,21 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
     return buildingLocations[building] ?? defaultLocation;
   }
 
-  /// Schedule notifications for all planned journey events
+  /// Schedule notifications for ALL journey events (wishlist + planned)
+  /// This ensures users get notified about all events in their journey
   Future<void> _scheduleNotificationsForJourney() async {
-    if (notificationService == null) return;
+    if (notificationService == null) {
+      print('⚠️ Journey: Notification service not available');
+      return;
+    }
 
     try {
-      // Get all planned journey items
-      final plannedItems = await _dao.getPlannedItems();
+      // Get ALL journey items (both wishlist and planned)
+      final allItems = await _dao.getAllJourneyItems();
 
       // Convert to notification data
       final events = <JourneyEventData>[];
-      for (final item in plannedItems) {
+      for (final item in allItems) {
         events.add(JourneyEventData(
           eventId: item.event.id,
           title: item.event.title,
@@ -322,12 +332,13 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
         ));
       }
 
-      // Schedule notifications
+      // Schedule notifications for all items
       await notificationService!.scheduleJourneyNotifications(events: events);
       
-      print('DEBUG Journey: Scheduled ${events.length} notifications');
-    } catch (e) {
-      print('Error scheduling notifications: $e');
+      print('✅ Journey: Scheduled ${events.length} notifications for all journey items (wishlist + planned)');
+    } catch (e, stackTrace) {
+      print('❌ Error scheduling notifications: $e');
+      print('Stack trace: $stackTrace');
     }
   }
 }
