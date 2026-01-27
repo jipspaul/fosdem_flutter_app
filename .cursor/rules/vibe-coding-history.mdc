@@ -1,55 +1,117 @@
 ---
-description: Automatically maintain vibe coding history documentation
+description: Automatically maintain vibe coding history documentation - MANDATORY for all sessions
 alwaysApply: true
+priority: high
 ---
 
 # Vibe Coding History Documentation
 
 ## Overview
 
+**CRITICAL RULE**: This rule is MANDATORY and must be applied to EVERY conversation session. ALL user prompts and AI responses MUST be documented without exception.
+
 This rule ensures that all conversation sessions are automatically documented to maintain a complete history of the vibe coding process.
 
-## Requirements
+## Requirements - MANDATORY
 
-At the end of each conversation session, automatically create or update a session file in `docs/vibe-coding-history/sessions/` with the following information:
+**You MUST create or update a session file for EVERY conversation, regardless of size or complexity.**
+
+At the end of each conversation session (or when significant work is completed), automatically create or update a session file in `docs/vibe-coding-history/sessions/` with the following information:
 
 ### Session File Content
 
-1. **Date and timestamp** - When the session occurred
-2. **User prompts/questions** - All questions and requests from the user
+1. **Date and timestamp** - When the session occurred (use current date)
+2. **User prompts/questions** - ALL questions and requests from the user (copy verbatim)
 3. **AI responses and plans** - Complete responses, plans, and implementation details
 4. **Context** - What was being worked on during the session
-5. **Code changes** - Summary of all file modifications made
+5. **Code changes** - Summary of ALL file modifications made (list all files changed)
 6. **Decisions** - Important architectural, design, or implementation decisions
+7. **Testing recommendations** - If applicable
 
 ### File Naming Convention
 
-- Format: `YYYY-MM-DD-session-N.md` or `YYYY-MM-DD-description.md`
+- Format: `YYYY-MM-DD-description.md` (preferred) or `YYYY-MM-DD-session-N.md`
+- Use descriptive names when possible
 - Examples:
   - `2026-01-26-ios-configuration.md`
-  - `2026-01-26-session-1.md`
+  - `2026-01-26-dark-mode-fixes.md`
+  - `2026-01-26-notification-setup.md`
   - `2026-01-27-feature-implementation.md`
 
 ### File Location
 
-All session files should be created in:
+All session files MUST be created in:
 ```
 docs/vibe-coding-history/sessions/
 ```
 
-### When to Create Session Files
+### When to Create Session Files - ALWAYS
 
-- At the end of each conversation session
-- When significant work has been completed
-- When a new feature or major change is implemented
-- When the user explicitly requests documentation
+**You MUST create a session file:**
+- ✅ At the end of EVERY conversation session (mandatory)
+- ✅ When ANY code changes are made
+- ✅ When significant work has been completed
+- ✅ When a new feature or major change is implemented
+- ✅ When the user explicitly requests documentation
+- ✅ Even for small fixes or minor changes
+- ✅ When answering questions or providing explanations
+
+**There are NO exceptions to this rule.**
 
 ### File Format
 
 Each session file should be a well-structured Markdown document with:
-- Clear headings and sections
-- Code examples when relevant
-- Links to modified files
-- Summary of outcomes
+
+```markdown
+# Session Title
+
+**Date:** YYYY-MM-DD  
+**Context:** Brief description
+
+## User Prompts
+
+1. **Prompt 1:**
+   > "Exact user prompt text"
+
+2. **Prompt 2:**
+   > "Exact user prompt text"
+
+## AI Responses & Plan
+
+### Analysis
+[Analysis of the request]
+
+### Implementation Plan
+[Step-by-step plan]
+
+## Code Changes Made
+
+### File 1: path/to/file.dart
+- Change description
+- Another change
+
+### File 2: path/to/file2.dart
+- Change description
+
+## Decisions
+
+[Important decisions made]
+
+## Summary
+
+[Brief summary of what was accomplished]
+```
+
+### Important Notes
+
+- **Copy user prompts verbatim** - Don't paraphrase, use exact quotes
+- **Document ALL file changes** - List every file that was modified
+- **Include context** - Explain what was being worked on
+- **Be thorough** - Better to document too much than too little
+- **Use clear structure** - Make it easy to find information later
+
+## Enforcement
+
+This rule has `alwaysApply: true` and `priority: high`, meaning it must be followed in EVERY conversation. Failure to document a session is a violation of this rule.
 
 This documentation serves as a historical record of the development process and helps maintain context across sessions.

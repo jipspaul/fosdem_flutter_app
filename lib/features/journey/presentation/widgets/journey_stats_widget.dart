@@ -27,7 +27,7 @@ class JourneyStatsWidget extends StatelessWidget {
                     icon: Icons.event,
                     label: 'Events',
                     value: '${stats.plannedCount}',
-                    color: Colors.blue,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 Expanded(
@@ -35,7 +35,7 @@ class JourneyStatsWidget extends StatelessWidget {
                     icon: Icons.bookmark,
                     label: 'Wishlist',
                     value: '${stats.wishlistCount}',
-                    color: Colors.orange,
+                    color: Theme.of(context).colorScheme.secondary,
                   ),
                 ),
               ],
@@ -48,7 +48,7 @@ class JourneyStatsWidget extends StatelessWidget {
                     icon: Icons.directions_walk,
                     label: 'Walking',
                     value: '${stats.totalWalkingTime.inMinutes} min',
-                    color: Colors.green,
+                    color: Theme.of(context).colorScheme.tertiary,
                   ),
                 ),
                 Expanded(
@@ -56,7 +56,9 @@ class JourneyStatsWidget extends StatelessWidget {
                     icon: Icons.warning,
                     label: 'Conflicts',
                     value: '${stats.conflictCount}',
-                    color: stats.conflictCount > 0 ? Colors.red : Colors.grey,
+                    color: stats.conflictCount > 0 
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -65,7 +67,9 @@ class JourneyStatsWidget extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 'Total distance: ${(stats.totalDistance / 1000).toStringAsFixed(2)} km',
-                style: TextStyle(color: Colors.grey.shade600),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ],
@@ -106,7 +110,7 @@ class _StatItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],

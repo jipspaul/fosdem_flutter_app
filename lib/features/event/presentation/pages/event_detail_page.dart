@@ -60,9 +60,15 @@ class EventDetailPage extends StatelessWidget {
             return Column(
               children: [
                 Container(
-                  color: Colors.blue.shade100,
+                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
                   padding: const EdgeInsets.all(8),
-                  child: Text('DEBUG: Loading...\n$debugInfo', style: const TextStyle(fontSize: 10)),
+                  child: Text(
+                    'DEBUG: Loading...\n$debugInfo',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
                 ),
                 const Expanded(child: Center(child: CircularProgressIndicator())),
               ],
@@ -102,14 +108,26 @@ class EventDetailPage extends StatelessWidget {
         children: [
           // Debug info card
           Card(
-            color: Colors.green.shade100,
+            color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('DEBUG: Scraper Success!', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(debugInfo, style: const TextStyle(fontSize: 10)),
+                  Text(
+                    'DEBUG: Scraper Success!',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  Text(
+                    debugInfo,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -150,15 +168,27 @@ class EventDetailPage extends StatelessWidget {
           // Debug info card
           if (debugInfo != null) ...[
             Card(
-              color: Colors.red.shade100,
+              color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.5),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('DEBUG INFO:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'DEBUG INFO:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(debugInfo, style: const TextStyle(fontSize: 10)),
+                    Text(
+                      debugInfo,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -167,17 +197,23 @@ class EventDetailPage extends StatelessWidget {
           ],
           if (error != null) ...[
             Card(
-              color: Colors.orange.shade100,
+              color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.5),
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning, color: Colors.orange),
+                    Icon(
+                      Icons.warning,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Could not load full details: $error',
-                        style: const TextStyle(fontSize: 12),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
                       ),
                     ),
                   ],

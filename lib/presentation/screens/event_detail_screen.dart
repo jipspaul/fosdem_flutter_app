@@ -125,10 +125,16 @@ class _EventDetailContent extends StatelessWidget {
             return Column(
               children: [
                 Container(
-                  color: Colors.blue.shade100,
+                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
                   padding: const EdgeInsets.all(8),
                   width: double.infinity,
-                  child: Text('DEBUG: Scraping...\n$debugInfo', style: const TextStyle(fontSize: 10)),
+                  child: Text(
+                    'DEBUG: Scraping...\n$debugInfo',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
                 ),
                 const Expanded(child: Center(child: CircularProgressIndicator())),
               ],
@@ -178,7 +184,7 @@ class _EventDetailContent extends StatelessWidget {
                 Text(
                   event.subtitle!,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                 ),
               ],
@@ -187,7 +193,7 @@ class _EventDetailContent extends StatelessWidget {
               // Scraped Content Section - Show prominently at the top if available
               if (scrapedDetail != null) ...[
                 Card(
-                  color: Colors.green.shade50,
+                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
                   elevation: 4,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -196,13 +202,16 @@ class _EventDetailContent extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.cloud_download, color: Colors.green.shade700),
+                            Icon(
+                              Icons.cloud_download,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'Live Event Information',
                               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.green.shade700,
+                                color: Theme.of(context).colorScheme.onPrimaryContainer,
                               ),
                             ),
                           ],
@@ -281,18 +290,26 @@ class _EventDetailContent extends StatelessWidget {
                               onTap: () => _launchUrl(link.url),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.link, size: 16, color: Colors.blue),
+                                  Icon(
+                                    Icons.link,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       link.title,
-                                      style: const TextStyle(
-                                        color: Colors.blue,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.primary,
                                         decoration: TextDecoration.underline,
                                       ),
                                     ),
                                   ),
-                                  const Icon(Icons.open_in_new, size: 16, color: Colors.blue),
+                                  Icon(
+                                    Icons.open_in_new,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
                                 ],
                               ),
                             ),
@@ -315,18 +332,26 @@ class _EventDetailContent extends StatelessWidget {
                               onTap: () => _launchUrl(attachment.url),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.attachment, size: 16, color: Colors.blue),
+                                  Icon(
+                                    Icons.attachment,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       attachment.title,
-                                      style: const TextStyle(
-                                        color: Colors.blue,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.primary,
                                         decoration: TextDecoration.underline,
                                       ),
                                     ),
                                   ),
-                                  const Icon(Icons.download, size: 16, color: Colors.blue),
+                                  Icon(
+                                    Icons.download,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
                                 ],
                               ),
                             ),
@@ -342,17 +367,22 @@ class _EventDetailContent extends StatelessWidget {
               // Show error if scraping failed
               if (error != null) ...[
                 Card(
-                  color: Colors.orange.shade50,
+                  color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.5),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        Icon(Icons.warning, color: Colors.orange.shade700),
+                        Icon(
+                          Icons.warning,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Could not load live event information: $error',
-                            style: TextStyle(color: Colors.orange.shade900),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onErrorContainer,
+                            ),
                           ),
                         ),
                       ],
@@ -384,17 +414,20 @@ class _EventDetailContent extends StatelessWidget {
               // Data from xCal (from database) - COLLAPSED by default (THIRD POSITION)
               ExpansionTile(
                 initiallyExpanded: false,
-                backgroundColor: Colors.blue.shade50,
-                collapsedBackgroundColor: Colors.blue.shade50,
+                backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                collapsedBackgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                 title: Row(
                   children: [
-                    Icon(Icons.storage, color: Colors.blue.shade700),
+                    Icon(
+                      Icons.storage,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Event Data from xCal',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -405,21 +438,21 @@ class _EventDetailContent extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDataRow('Event ID', '${event.id}'),
-                        _buildDataRow('Title', event.title),
-                        if (event.subtitle != null) _buildDataRow('Subtitle', event.subtitle!),
-                        _buildDataRow('Room', event.room),
-                        _buildDataRow('Track', event.track),
-                        _buildDataRow('Date', event.date.toString().split(' ')[0]),
-                        _buildDataRow('Start Time', event.start.toString()),
-                        _buildDataRow('Duration', '${event.duration} minutes'),
-                        if (event.abstract != null) _buildDataRow('Has Abstract', event.abstract!.isNotEmpty ? 'Yes' : 'No'),
-                        if (event.description != null) _buildDataRow('Has Description', event.description!.isNotEmpty ? 'Yes' : 'No'),
-                        _buildDataRow('Speakers Count', '${event.people.length}'),
-                        _buildDataRow('Links Count', '${event.links.length}'),
-                        _buildDataRow('Attachments Count', '${event.attachments.length}'),
+                        _buildDataRow(context, 'Event ID', '${event.id}'),
+                        _buildDataRow(context, 'Title', event.title),
+                        if (event.subtitle != null) _buildDataRow(context, 'Subtitle', event.subtitle!),
+                        _buildDataRow(context, 'Room', event.room),
+                        _buildDataRow(context, 'Track', event.track),
+                        _buildDataRow(context, 'Date', event.date.toString().split(' ')[0]),
+                        _buildDataRow(context, 'Start Time', event.start.toString()),
+                        _buildDataRow(context, 'Duration', '${event.duration} minutes'),
+                        if (event.abstract != null) _buildDataRow(context, 'Has Abstract', event.abstract!.isNotEmpty ? 'Yes' : 'No'),
+                        if (event.description != null) _buildDataRow(context, 'Has Description', event.description!.isNotEmpty ? 'Yes' : 'No'),
+                        _buildDataRow(context, 'Speakers Count', '${event.people.length}'),
+                        _buildDataRow(context, 'Links Count', '${event.links.length}'),
+                        _buildDataRow(context, 'Attachments Count', '${event.attachments.length}'),
                         if (event.url != null && event.url!.isNotEmpty)
-                          _buildDataRow('URL', event.url!, isUrl: true),
+                          _buildDataRow(context, 'URL', event.url!, isUrl: true),
                       ],
                     ),
                   ),
@@ -530,7 +563,11 @@ class _EventDetailContent extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
+          Icon(
+            icon,
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 12),
           Text(
             '$label: ',
@@ -542,8 +579,8 @@ class _EventDetailContent extends StatelessWidget {
                   onTap: () => _launchUrl(value),
                   child: Text(
                     value,
-                    style: const TextStyle(
-                      color: Colors.blue,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                       decoration: TextDecoration.underline,
                     ),
                   ),
@@ -555,7 +592,7 @@ class _EventDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildDataRow(String label, String value, {bool isUrl = false}) {
+  Widget _buildDataRow(BuildContext context, String label, String value, {bool isUrl = false}) {
     if (value.isEmpty) return const SizedBox.shrink();
     
     return Padding(
@@ -579,8 +616,8 @@ class _EventDetailContent extends StatelessWidget {
                   onTap: () => _launchUrl(value),
                   child: Text(
                     value,
-                    style: const TextStyle(
-                      color: Colors.blue,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                       decoration: TextDecoration.underline,
                       fontSize: 13,
                     ),

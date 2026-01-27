@@ -12,23 +12,27 @@ class ConflictCardWidget extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _getSeverityColor()),
+        border: Border.all(color: _getSeverityColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(_getTypeIcon(), size: 20, color: _getSeverityColor()),
+              Icon(
+                _getTypeIcon(),
+                size: 20,
+                color: _getSeverityColor(context),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   conflict.description,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: _getSeverityColor(),
+                    color: _getSeverityColor(context),
                   ),
                 ),
               ),
@@ -39,18 +43,18 @@ class ConflictCardWidget extends StatelessWidget {
     );
   }
 
-  Color _getSeverityColor() {
+  Color _getSeverityColor(BuildContext context) {
     switch (conflict.severity) {
       case ConflictSeverity.critical:
-        return Colors.red;
+        return Theme.of(context).colorScheme.error;
       case ConflictSeverity.high:
-        return Colors.orange;
+        return Theme.of(context).colorScheme.errorContainer;
       case ConflictSeverity.medium:
-        return Colors.yellow.shade700;
+        return Theme.of(context).colorScheme.tertiary;
       case ConflictSeverity.low:
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case ConflictSeverity.info:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 

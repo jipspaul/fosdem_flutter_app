@@ -49,7 +49,7 @@ class JourneyTimelineWidget extends StatelessWidget {
                 const Spacer(),
                 Chip(
                   label: Text('${events.length} events'),
-                  backgroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                 ),
               ],
             ),
@@ -172,8 +172,15 @@ class _TimelineEventCard extends StatelessWidget {
           },
           child: Container(
             decoration: BoxDecoration(
-              color: isCandidate ? Colors.blue.shade50 : null,
-              border: isCandidate ? Border.all(color: Colors.blue.shade200, width: 2) : null,
+              color: isCandidate 
+                  ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+                  : null,
+              border: isCandidate 
+                  ? Border.all(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                      width: 2,
+                    )
+                  : null,
               borderRadius: isCandidate ? BorderRadius.circular(8) : null,
             ),
             child: Padding(
@@ -189,11 +196,15 @@ class _TimelineEventCard extends StatelessWidget {
                         height: 12,
                         decoration: BoxDecoration(
                           color: isCandidate
-                              ? Colors.blue.shade300
-                              : (hasConflict ? Colors.red : Colors.green),
+                              ? Theme.of(context).colorScheme.primary
+                              : (hasConflict 
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.tertiary),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isCandidate ? Colors.blue : Colors.white,
+                            color: isCandidate 
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.surface,
                             width: 2,
                           ),
                         ),
@@ -202,7 +213,7 @@ class _TimelineEventCard extends StatelessWidget {
                         Container(
                           width: 2,
                           height: 60,
-                          color: Colors.grey.shade300,
+                          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
                         ),
                     ],
                   ),
@@ -220,14 +231,22 @@ class _TimelineEventCard extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: 8.0),
                             child: Row(
                               children: [
-                                Icon(Icons.bookmark, size: 16, color: Colors.blue.shade700),
+                                Icon(
+                                  Icons.bookmark,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                                 const SizedBox(width: 4),
-                                Text(
-                                  'FAVORITE - TAP TO ADD TO JOURNEY',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade700,
+                                Expanded(
+                                  child: Text(
+                                    'FAVORITE - TAP TO ADD TO JOURNEY',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
                                 ),
                               ],
@@ -240,7 +259,7 @@ class _TimelineEventCard extends StatelessWidget {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: isCandidate
-                                ? Colors.blue.shade700
+                                ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).colorScheme.primary,
                           ),
                         ),
@@ -261,14 +280,18 @@ class _TimelineEventCard extends StatelessWidget {
                       // Location and track
                       Row(
                         children: [
-                          Icon(Icons.location_on, size: 16, color: Colors.grey.shade600),
+                          Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               '${event.room}  •  Building ${event.building}',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -280,14 +303,18 @@ class _TimelineEventCard extends StatelessWidget {
 
                       Row(
                         children: [
-                          Icon(Icons.category, size: 16, color: Colors.grey.shade600),
+                          Icon(
+                            Icons.category,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               event.track,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -305,7 +332,7 @@ class _TimelineEventCard extends StatelessWidget {
                             (i) => Icon(
                               i < (6 - event.priority) ? Icons.star : Icons.star_border,
                               size: 16,
-                              color: Colors.amber,
+                              color: Theme.of(context).colorScheme.tertiary,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -313,7 +340,7 @@ class _TimelineEventCard extends StatelessWidget {
                             'Priority ${event.priority}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -326,10 +353,10 @@ class _TimelineEventCard extends StatelessWidget {
                           return Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: _getConflictColor(conflict.severity).withValues(alpha: 0.1),
+                              color: _getConflictColor(context, conflict.severity).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: _getConflictColor(conflict.severity),
+                                color: _getConflictColor(context, conflict.severity),
                               ),
                             ),
                             child: Row(
@@ -337,7 +364,7 @@ class _TimelineEventCard extends StatelessWidget {
                                 Icon(
                                   _getConflictIcon(conflict.type),
                                   size: 16,
-                                  color: _getConflictColor(conflict.severity),
+                                  color: _getConflictColor(context, conflict.severity),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
@@ -345,7 +372,7 @@ class _TimelineEventCard extends StatelessWidget {
                                     conflict.description,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: _getConflictColor(conflict.severity),
+                                      color: _getConflictColor(context, conflict.severity),
                                     ),
                                   ),
                                 ),
@@ -361,19 +388,23 @@ class _TimelineEventCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.note, size: 16, color: Colors.blue.shade700),
+                              Icon(
+                                Icons.note,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   event.notes!,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.blue.shade700,
+                                    color: Theme.of(context).colorScheme.onPrimaryContainer,
                                   ),
                                 ),
                               ),
@@ -441,13 +472,21 @@ class _TimelineEventCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'remove',
                       child: Row(
                         children: [
-                          Icon(Icons.delete, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Remove', style: TextStyle(color: Colors.red)),
+                          Icon(
+                            Icons.delete,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Remove',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -470,19 +509,23 @@ class _TimelineEventCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
+                      color: Theme.of(context).colorScheme.tertiaryContainer.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.coffee, size: 16, color: Colors.green.shade700),
+                        Icon(
+                          Icons.coffee,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.tertiary,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           '${breakDuration!.inMinutes} min break',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.green.shade700,
+                            color: Theme.of(context).colorScheme.onTertiaryContainer,
                           ),
                         ),
                       ],
@@ -497,18 +540,18 @@ class _TimelineEventCard extends StatelessWidget {
     );
   }
 
-  Color _getConflictColor(ConflictSeverity severity) {
+  Color _getConflictColor(BuildContext context, ConflictSeverity severity) {
     switch (severity) {
       case ConflictSeverity.critical:
-        return Colors.red;
+        return Theme.of(context).colorScheme.error;
       case ConflictSeverity.high:
-        return Colors.orange;
+        return Theme.of(context).colorScheme.errorContainer;
       case ConflictSeverity.medium:
-        return Colors.yellow.shade700;
+        return Theme.of(context).colorScheme.tertiary;
       case ConflictSeverity.low:
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case ConflictSeverity.info:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 
@@ -653,9 +696,11 @@ class _AddToCandidateButton extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
+              color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.shade300),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.error,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -665,7 +710,7 @@ class _AddToCandidateButton extends StatelessWidget {
                   c,
                   style: TextStyle(
                     fontSize: 10,
-                    color: Colors.orange.shade900,
+                    color: Theme.of(context).colorScheme.onErrorContainer,
                   ),
                 ),
               )).toList(),
@@ -698,13 +743,14 @@ class _AddToCandidateButton extends StatelessWidget {
                       onPressed: () => Navigator.pop(ctx),
                       child: const Text('Cancel'),
                     ),
-                    ElevatedButton(
+                      ElevatedButton(
                       onPressed: () {
                         context.read<JourneyBloc>().add(AddToJourney(eventId: event.eventId));
                         Navigator.pop(ctx);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                        foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
                       ),
                       child: const Text('Add Anyway'),
                     ),
@@ -718,8 +764,12 @@ class _AddToCandidateButton extends StatelessWidget {
           icon: Icon(hasConflicts ? Icons.warning : Icons.add, size: 16),
           label: const Text('Add'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: hasConflicts ? Colors.orange : Colors.blue,
-            foregroundColor: Colors.white,
+            backgroundColor: hasConflicts 
+                ? Theme.of(context).colorScheme.errorContainer
+                : Theme.of(context).colorScheme.primary,
+            foregroundColor: hasConflicts
+                ? Theme.of(context).colorScheme.onErrorContainer
+                : Theme.of(context).colorScheme.onPrimary,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
         ),

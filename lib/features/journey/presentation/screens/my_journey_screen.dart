@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import '../../domain/models/journey_models.dart';
 import '../bloc/journey_bloc.dart';
 import '../bloc/journey_event.dart';
@@ -72,7 +71,11 @@ class _MyJourneyScreenState extends State<MyJourneyScreen> with SingleTickerProv
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                   const SizedBox(height: 16),
                   Text(state.message),
                   const SizedBox(height: 16),
@@ -104,19 +107,32 @@ class _MyJourneyScreenState extends State<MyJourneyScreen> with SingleTickerProv
   }
 
   Widget _buildJourneyTab(JourneyLoaded state) {
-    if (state.planned.isEmpty && state.wishlist.isEmpty && state.candidates.isEmpty) {
+          if (state.planned.isEmpty && state.wishlist.isEmpty && state.candidates.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.event_note, size: 80, color: Colors.grey),
+            Icon(
+              Icons.event_note,
+              size: 80,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Your journey is empty',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 8),
-            const Text('Add events from the schedule as favorites first'),
+            Text(
+              'Add events from the schedule as favorites first',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       );
@@ -134,7 +150,7 @@ class _MyJourneyScreenState extends State<MyJourneyScreen> with SingleTickerProv
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Card(
-                  color: Colors.blue.shade50,
+                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -142,13 +158,16 @@ class _MyJourneyScreenState extends State<MyJourneyScreen> with SingleTickerProv
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.blue.shade700),
+                            Icon(
+                              Icons.info_outline,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Your favorites are shown below. Tap "Add" to add them to your journey.',
                                 style: TextStyle(
-                                  color: Colors.blue.shade700,
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -232,7 +251,7 @@ class _MyJourneyScreenState extends State<MyJourneyScreen> with SingleTickerProv
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Card(
-                  color: Colors.red.shade50,
+                  color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.5),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -240,14 +259,17 @@ class _MyJourneyScreenState extends State<MyJourneyScreen> with SingleTickerProv
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.warning, color: Colors.red.shade700),
+                            Icon(
+                              Icons.warning,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               '${state.conflicts.length} Conflict${state.conflicts.length > 1 ? 's' : ''} Detected',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
-                                color: Colors.red.shade700,
+                                color: Theme.of(context).colorScheme.onErrorContainer,
                               ),
                             ),
                           ],
@@ -330,14 +352,27 @@ class _MyJourneyScreenState extends State<MyJourneyScreen> with SingleTickerProv
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.bookmark_border, size: 80, color: Colors.grey),
+            Icon(
+              Icons.bookmark_border,
+              size: 80,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Your wishlist is empty',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 8),
-            const Text('Add interesting events from the schedule'),
+            Text(
+              'Add interesting events from the schedule',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       );
