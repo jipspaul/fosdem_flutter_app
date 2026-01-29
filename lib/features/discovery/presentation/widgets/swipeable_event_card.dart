@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../domain/entities/event_domain.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/di/injection_container.dart' as di;
+import '../../../../data/services/event_scraper_service.dart';
 
 class SwipeableEventCard extends StatefulWidget {
+  // Static cache to store scraped descriptions, keyed by event id or URL.
+  static final Map<dynamic, String> _scrapedDescriptionCache = {};
   final EventDomain event;
   final VoidCallback onSwipeLeft;
   final VoidCallback onSwipeRight;
@@ -20,7 +24,8 @@ class SwipeableEventCard extends StatefulWidget {
   State<SwipeableEventCard> createState() => _SwipeableEventCardState();
 }
 
-class _SwipeableEventCardState extends State<SwipeableEventCard> with SingleTickerProviderStateMixin {
+class _SwipeableEventCardState extends State<SwipeableEventCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _animation;
   Offset _dragOffset = Offset.zero;
@@ -33,7 +38,10 @@ class _SwipeableEventCardState extends State<SwipeableEventCard> with SingleTick
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _animation = Tween<Offset>(begin: Offset.zero, end: Offset.zero).animate(_controller);
+    _animation = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset.zero,
+    ).animate(_controller);
   }
 
   @override
@@ -60,7 +68,7 @@ class _SwipeableEventCardState extends State<SwipeableEventCard> with SingleTick
 
     if (_dragOffset.dx.abs() > threshold) {
       // Swipe detected
-      final targetOffset = _dragOffset.dx > 0 
+      final targetOffset = _dragOffset.dx > 0
           ? Offset(screenWidth * 2, _dragOffset.dy)
           : Offset(-screenWidth * 2, _dragOffset.dy);
 
@@ -115,10 +123,7 @@ class _SwipeableEventCardState extends State<SwipeableEventCard> with SingleTick
           offset: offset,
           child: Transform.rotate(
             angle: rotation,
-            child: Opacity(
-              opacity: opacity,
-              child: child,
-            ),
+            child: Opacity(opacity: opacity, child: child),
           ),
         );
       },
@@ -126,111 +131,181 @@ class _SwipeableEventCardState extends State<SwipeableEventCard> with SingleTick
         onPanStart: _onPanStart,
         onPanUpdate: _onPanUpdate,
         onPanEnd: _onPanEnd,
-        child: Stack(
-          children: [
-            _buildCard(),
-            _buildSwipeIndicators(),
-          ],
-        ),
+        child: Stack(children: [_buildCard(), _buildSwipeIndicators()]),
       ),
     );
   }
 
   Widget _buildCard() {
-    return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        width: double.infinity,
-        height: double.infinity,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Track badge
-            if (widget.event.track?.isNotEmpty == true)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  widget.event.track!,
-                  style: TextStyle(
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+    return GestureDetector(
+      onTap: _showDialog,
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Track badge
+              if (widget.event.track?.isNotEmpty == true)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    widget.event.track!,
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
+              const SizedBox(height: 16),
+      
+              // Title
+              Text(
+                widget.event.title,
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-            const SizedBox(height: 16),
-
-            // Title
-            Text(
-              widget.event.title,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 16),
-
-            // Time and duration
-            Row(
-              children: [
-                Icon(Icons.access_time, size: 20, color: Colors.grey[600]),
-                const SizedBox(width: 8),
-                Text(
-                  '${DateFormat('HH:mm').format(widget.event.startTime)} • ${widget.event.duration} min',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Room
-            if (widget.event.room.isNotEmpty)
+              const SizedBox(height: 16),
+      
+              // Time and duration
               Row(
                 children: [
-                  Icon(Icons.location_on, size: 20, color: Colors.grey[600]),
+                  Icon(Icons.access_time, size: 20, color: Colors.grey[600]),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.event.room,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  Text(
+                    '${DateFormat('HH:mm').format(widget.event.startTime)} • ${widget.event.duration} min',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                 ],
               ),
-            const SizedBox(height: 16),
-
-            // Abstract/Description
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(
-                  widget.event.abstract?.isNotEmpty == true 
-                      ? widget.event.abstract! 
-                      : widget.event.description ?? 'No description available',
-                  style: const TextStyle(fontSize: 16, height: 1.5),
+              const SizedBox(height: 8),
+      
+              // Room
+              if (widget.event.room.isNotEmpty)
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 20, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.event.room,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+      
+              // Abstract/Description
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Text(
+                    widget.event.description ?? 'No description available',
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                    maxLines: 4,
+                  ),
                 ),
               ),
-            ),
-
-            const SizedBox(height: 16),
-          ],
+      
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _showDialog() async {
+    final cacheKey = widget.event.id;
+    String? descriptionToShow = widget.event.scrapedDescription?.isNotEmpty == true
+        ? widget.event.scrapedDescription
+        : widget.event.description;
+
+    // Look in cache first
+    if ((descriptionToShow == null || descriptionToShow.isEmpty) && SwipeableEventCard._scrapedDescriptionCache.containsKey(cacheKey)) {
+      descriptionToShow = SwipeableEventCard._scrapedDescriptionCache[cacheKey];
+    }
+
+    // If still empty, trigger scrape (simulate async scraping logic)
+    if (descriptionToShow == null || descriptionToShow.isEmpty) {
+      descriptionToShow = await _scrapeDescriptionFromWeb(widget.event);
+      // Cache it
+      SwipeableEventCard._scrapedDescriptionCache[cacheKey] = descriptionToShow ?? '';
+    }
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(widget.event.title),
+          content: SingleChildScrollView(
+            child: Text(
+              descriptionToShow ?? 'No description available',
+              style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Scrapes the event description from the web using EventScraperService
+  Future<String?> _scrapeDescriptionFromWeb(EventDomain event) async {
+    try {
+      // Check if event has a URL
+      if (event.url == null || event.url!.isEmpty) {
+        print('DEBUG: Event ${event.id} has no URL, cannot scrape');
+        return null;
+      }
+
+      // Get the scraper service from dependency injection
+      final scraperService = di.sl<EventScraperService>();
+      
+      // Fix malformed URLs (https:/fosdem.org -> https://fosdem.org)
+      String eventUrl = event.url!;
+      if (!eventUrl.startsWith('http://') && !eventUrl.startsWith('https://')) {
+        eventUrl = 'https:$eventUrl';
+      }
+
+      // Scrape the event detail
+      final eventDetail = await scraperService.scrapeEventDetail(eventUrl);
+      
+      // Return description if available, otherwise return abstract
+      if (eventDetail.description.isNotEmpty) {
+        return eventDetail.description;
+      } else if (eventDetail.abstract.isNotEmpty) {
+        return eventDetail.abstract;
+      }
+      
+      return null;
+    } catch (e) {
+      print('DEBUG: Error scraping description for event ${event.id}: $e');
+      return null;
+    }
   }
 
   Widget _buildSwipeIndicators() {
@@ -260,11 +335,7 @@ class _SwipeableEventCardState extends State<SwipeableEventCard> with SingleTick
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 48,
-                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 48),
               ),
             ),
 

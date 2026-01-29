@@ -10,6 +10,7 @@ class EventDomain {
   final String room;
   final String? abstract;
   final String? description;
+  final String? scrapedDescription;
   final String? url;
   final int day;
   final bool isFavorite;
@@ -27,6 +28,7 @@ class EventDomain {
     required this.room,
     this.abstract,
     this.description,
+    this.scrapedDescription,
     this.url,
     required this.day,
     this.isFavorite = false,
