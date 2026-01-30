@@ -9,6 +9,8 @@ import '../../data/datasources/local/database.dart';
 import '../../core/di/injection_container.dart' as di;
 import '../bloc/favorites/favorites_bloc.dart';
 import '../bloc/favorites/favorites_state.dart';
+import '../../features/journey/presentation/bloc/journey_bloc.dart';
+import '../../features/journey/presentation/bloc/journey_state.dart';
 import 'event_detail_screen.dart';
 
 class MapScreen extends StatefulWidget {
@@ -291,20 +293,34 @@ class _MapScreenState extends State<MapScreen> {
                             itemCount: _buildingEvents.length,
                             itemBuilder: (context, index) {
                               final event = _buildingEvents[index];
-                              return BlocBuilder<FavoritesBloc, FavoritesState>(
-                                builder: (context, favState) {
-                                  final isFavorite = favState is FavoritesLoaded &&
-                                      favState.isFavorite(event.id.toString());
-                                  
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 4,
-                                    ),
-                                    child: ListTile(
-                                      leading: isFavorite
-                                          ? const Icon(Icons.favorite, color: Colors.red)
-                                          : const Icon(Icons.event),
+                              return BlocBuilder<JourneyBloc, JourneyState>(
+                                buildWhen: (prev, curr) => prev != curr,
+                                builder: (context, journeyCtx) {
+                                  return BlocBuilder<FavoritesBloc, FavoritesState>(
+                                    builder: (context, favState) {
+                                      final isOnTimeline = journeyCtx is JourneyLoaded &&
+                                          (journeyCtx.planned.any((i) => i.eventId == event.id) ||
+                                              journeyCtx.wishlist.any((i) => i.eventId == event.id));
+                                      final isFavorite = favState is FavoritesLoaded &&
+                                          favState.isFavorite(event.id.toString());
+
+                                      IconData leadingIcon = Icons.event;
+                                      Color? leadingColor;
+                                      if (isOnTimeline) {
+                                        leadingIcon = Icons.event_available;
+                                        leadingColor = Colors.green;
+                                      } else if (isFavorite) {
+                                        leadingIcon = Icons.favorite;
+                                        leadingColor = Colors.red;
+                                      }
+
+                                      return Card(
+                                        margin: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 4,
+                                        ),
+                                        child: ListTile(
+                                          leading: Icon(leadingIcon, color: leadingColor),
                                       title: Text(
                                         event.title,
                                         maxLines: 2,
@@ -328,15 +344,17 @@ class _MapScreenState extends State<MapScreen> {
                                           ),
                                         ],
                                       ),
-                                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                                      onTap: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) => EventDetailScreen(event: event),
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                                          onTap: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (context) => EventDetailScreen(event: event),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
                                   );
                                 },
                               );
@@ -375,7 +393,7 @@ class _MapScreenState extends State<MapScreen> {
             // Check if room starts with building name
             // e.g., "K.1.105" starts with "K"
             final room = eventEntity.room.toUpperCase();
-            return room.startsWith('$buildingPrefix.') || 
+            return room.startsWith('$buildingPrefix.') ||
                    room.startsWith(buildingPrefix) ||
                    room == buildingPrefix;
           })
@@ -396,24 +414,34 @@ class _MapScreenState extends State<MapScreen> {
                 attachments: const [],
                 isSync: false,
               ))
+          .where((event) => !event.isPast())
           .toList();
 
-      // Get favorites state
+      // Event IDs on my timeline (planned + wishlist)
+      final journeyBloc = context.read<JourneyBloc>();
+      final journeyState = journeyBloc.state;
+      final Set<int> timelineEventIds = {};
+      if (journeyState is JourneyLoaded) {
+        timelineEventIds.addAll(journeyState.planned.map((i) => i.eventId));
+        timelineEventIds.addAll(journeyState.wishlist.map((i) => i.eventId));
+      }
+
       final favoritesBloc = context.read<FavoritesBloc>();
       final favoritesState = favoritesBloc.state;
-      
-      // Sort: favorites first, then by date/time
+
+      // Sort: 1) on my timeline, 2) favorites, 3) rest; then by start time
       eventsInBuilding.sort((a, b) {
-        if (favoritesState is FavoritesLoaded) {
-          final aIsFavorite = favoritesState.isFavorite(a.id.toString());
-          final bIsFavorite = favoritesState.isFavorite(b.id.toString());
-          
-          // Favorites first
-          if (aIsFavorite && !bIsFavorite) return -1;
-          if (!aIsFavorite && bIsFavorite) return 1;
-        }
-        
-        // Then by date/time
+        final aOnTimeline = timelineEventIds.contains(a.id);
+        final bOnTimeline = timelineEventIds.contains(b.id);
+        final aIsFavorite = favoritesState is FavoritesLoaded &&
+            favoritesState.isFavorite(a.id.toString());
+        final bIsFavorite = favoritesState is FavoritesLoaded &&
+            favoritesState.isFavorite(b.id.toString());
+
+        if (aOnTimeline && !bOnTimeline) return -1;
+        if (!aOnTimeline && bOnTimeline) return 1;
+        if (aIsFavorite && !bIsFavorite) return -1;
+        if (!aIsFavorite && bIsFavorite) return 1;
         return a.start.compareTo(b.start);
       });
 

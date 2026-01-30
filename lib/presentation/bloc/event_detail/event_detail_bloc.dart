@@ -23,16 +23,25 @@ class EventDetailBloc extends Bloc<EventDetailEvent, EventDetailState> {
     
     try {
       String? eventUrl = event.eventUrl;
-      
-      // If URL is missing or malformed, we can't scrape
+
+      // If URL is missing, try to resolve from database (e.g. when opening from journey/Friends tab)
       if (eventUrl == null || eventUrl.isEmpty) {
-        print('DEBUG: Event URL is NULL for event "${event.eventTitle}" (ID: ${event.eventId})');
+        print('DEBUG: Event URL empty for event "${event.eventTitle}" (ID: ${event.eventId}), resolving from DB');
+        final entity = await _database.eventsDao.getEventById(event.eventId.toString());
+        if (entity != null && entity.url != null && entity.url!.trim().isNotEmpty) {
+          eventUrl = entity.url!.trim();
+          print('DEBUG: Resolved URL from DB: $eventUrl');
+        }
+      }
+
+      if (eventUrl == null || eventUrl.isEmpty) {
+        print('DEBUG: Event URL not available for event "${event.eventTitle}" (ID: ${event.eventId})');
         emit(const EventDetailError(
           'Event URL not available. Cannot load detailed information.'
         ));
         return;
       }
-      
+
       // Fix malformed URLs (https:/fosdem.org -> https://fosdem.org)
       if (!eventUrl.startsWith('http://') && !eventUrl.startsWith('https://')) {
         eventUrl = 'https:$eventUrl';

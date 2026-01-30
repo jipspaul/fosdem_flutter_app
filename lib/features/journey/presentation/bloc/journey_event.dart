@@ -85,3 +85,25 @@ class UpdatePreferences extends JourneyEvent {
 
   const UpdatePreferences(this.preferences);
 }
+
+class ImportJourneyFromUrl extends JourneyEvent {
+  final String url;
+
+  const ImportJourneyFromUrl(this.url);
+}
+
+class RemoveImportedJourney extends JourneyEvent {
+  final String key;
+
+  const RemoveImportedJourney(this.key);
+}
+
+class SetShowImportedJourney extends JourneyEvent {
+  final bool show;
+
+  const SetShowImportedJourney(this.show);
+}
+
+class ClearImportError extends JourneyEvent {
+  const ClearImportError();
+}

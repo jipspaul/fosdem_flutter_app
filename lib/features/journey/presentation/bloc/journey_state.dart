@@ -1,3 +1,4 @@
+import '../../domain/models/journey_export_model.dart';
 import '../../domain/models/journey_models.dart';
 
 abstract class JourneyState {
@@ -19,6 +20,9 @@ class JourneyLoaded extends JourneyState {
   final List<Conflict> conflicts;
   final JourneyStats stats;
   final JourneyPreferences preferences;
+  final Map<String, JourneyExportData> importedJourneys;
+  final bool showImportedJourney;
+  final String? importError;
 
   const JourneyLoaded({
     required this.wishlist,
@@ -27,6 +31,9 @@ class JourneyLoaded extends JourneyState {
     required this.conflicts,
     required this.stats,
     required this.preferences,
+    this.importedJourneys = const {},
+    this.showImportedJourney = true,
+    this.importError,
   });
 
   JourneyLoaded copyWith({
@@ -36,6 +43,9 @@ class JourneyLoaded extends JourneyState {
     List<Conflict>? conflicts,
     JourneyStats? stats,
     JourneyPreferences? preferences,
+    Map<String, JourneyExportData>? importedJourneys,
+    bool? showImportedJourney,
+    String? importError,
   }) {
     return JourneyLoaded(
       wishlist: wishlist ?? this.wishlist,
@@ -44,6 +54,9 @@ class JourneyLoaded extends JourneyState {
       conflicts: conflicts ?? this.conflicts,
       stats: stats ?? this.stats,
       preferences: preferences ?? this.preferences,
+      importedJourneys: importedJourneys ?? this.importedJourneys,
+      showImportedJourney: showImportedJourney ?? this.showImportedJourney,
+      importError: importError,
     );
   }
 

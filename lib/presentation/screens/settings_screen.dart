@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/di/injection_container.dart' as di;
+import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/journey/presentation/bloc/journey_bloc.dart';
 import '../../data/services/data_loading_service.dart';
 import '../../data/datasources/local/database.dart';
 import '../../core/services/notification_service.dart';
@@ -438,6 +441,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Journey Export/Import
+          BlocProvider.value(
+            value: context.read<JourneyBloc>(),
+            child: const Card(
+              child: JourneyExportImportSection(),
+            ),
+          ),
+          const SizedBox(height: 16),
           // Data Management Section
           Card(
             child: Padding(

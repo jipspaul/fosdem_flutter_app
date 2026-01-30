@@ -168,6 +168,7 @@ class MyApp extends StatelessWidget {
           create: (context) => JourneyBloc(
             database: di.sl(),
             notificationService: NotificationService(),
+            sharedPreferences: di.sl(),
           )..add(const LoadJourney()),
         ),
         BlocProvider(

@@ -7,11 +7,27 @@ import '../bloc/journey_event.dart';
 import '../../../../presentation/screens/event_detail_screen.dart';
 import '../../../../domain/entities/event.dart';
 
+/// Display info for an imported event (from someone else's journey).
+class ImportedEventEntry {
+  final JourneyItem item;
+  final String userName;
+  final String? userPictureUrl;
+  final String status; // "planned" | "wishlist"
+
+  const ImportedEventEntry({
+    required this.item,
+    required this.userName,
+    this.userPictureUrl,
+    required this.status,
+  });
+}
+
 class JourneyTimelineWidget extends StatelessWidget {
   final DateTime date;
   final List<JourneyItem> events;
   final List<JourneyItem> candidates;
   final List<Conflict> conflicts;
+  final List<ImportedEventEntry> importedEntries;
 
   const JourneyTimelineWidget({
     super.key,
@@ -19,6 +35,7 @@ class JourneyTimelineWidget extends StatelessWidget {
     required this.events,
     this.candidates = const [],
     required this.conflicts,
+    this.importedEntries = const [],
   });
 
   @override
@@ -71,23 +88,29 @@ class JourneyTimelineWidget extends StatelessWidget {
   }
 
   List<Widget> _buildTimelineItems(BuildContext context) {
-    // Merge and sort all items by time
-    final allItems = <({JourneyItem item, bool isCandidate})>[];
+    // Merge and sort all items by time (own events, candidates, imported)
+    final allItems = <({JourneyItem item, bool isCandidate, ImportedEventEntry? imported})>[];
     
     for (final event in events) {
-      allItems.add((item: event, isCandidate: false));
+      allItems.add((item: event, isCandidate: false, imported: null));
     }
     
     for (final candidate in candidates) {
-      // Only add if same day
       if (candidate.startTime.year == date.year &&
           candidate.startTime.month == date.month &&
           candidate.startTime.day == date.day) {
-        allItems.add((item: candidate, isCandidate: true));
+        allItems.add((item: candidate, isCandidate: true, imported: null));
       }
     }
     
-    // Sort by start time
+    for (final entry in importedEntries) {
+      if (entry.item.startTime.year == date.year &&
+          entry.item.startTime.month == date.month &&
+          entry.item.startTime.day == date.day) {
+        allItems.add((item: entry.item, isCandidate: false, imported: entry));
+      }
+    }
+    
     allItems.sort((a, b) => a.item.startTime.compareTo(b.item.startTime));
     
     final widgets = <Widget>[];
@@ -106,11 +129,13 @@ class JourneyTimelineWidget extends StatelessWidget {
         _TimelineEventCard(
           event: current.item,
           isCandidate: current.isCandidate,
-          hasConflict: _hasConflict(current.item),
-          conflicts: _getConflicts(current.item),
+          hasConflict: current.imported == null && _hasConflict(current.item),
+          conflicts: current.imported == null ? _getConflicts(current.item) : [],
           showBreak: !isLast,
           breakDuration: breakDuration,
           plannedEvents: events,
+          importedFrom: current.imported,
+          allImportedEntries: importedEntries,
         ),
       );
     }
@@ -127,6 +152,8 @@ class _TimelineEventCard extends StatelessWidget {
   final bool showBreak;
   final Duration? breakDuration;
   final List<JourneyItem> plannedEvents;
+  final ImportedEventEntry? importedFrom;
+  final List<ImportedEventEntry> allImportedEntries;
 
   const _TimelineEventCard({
     required this.event,
@@ -136,6 +163,8 @@ class _TimelineEventCard extends StatelessWidget {
     required this.showBreak,
     this.breakDuration,
     required this.plannedEvents,
+    this.importedFrom,
+    this.allImportedEntries = const [],
   });
 
   @override
@@ -174,14 +203,21 @@ class _TimelineEventCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: isCandidate 
                   ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
-                  : null,
+                  : (importedFrom != null
+                      ? Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.3)
+                      : null),
               border: isCandidate 
                   ? Border.all(
                       color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
                       width: 2,
                     )
-                  : null,
-              borderRadius: isCandidate ? BorderRadius.circular(8) : null,
+                  : (importedFrom != null
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.secondary.withOpacity(0.6),
+                          width: 2,
+                        )
+                      : null),
+              borderRadius: (isCandidate || importedFrom != null) ? BorderRadius.circular(8) : null,
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -249,6 +285,67 @@ class _TimelineEventCard extends StatelessWidget {
                                     maxLines: 1,
                                   ),
                                 ),
+                              ],
+                            ),
+                          ),
+
+                        // Imported journey badge (user name, avatar, planned/wishlist)
+                        if (importedFrom != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundImage: importedFrom!.userPictureUrl != null &&
+                                          importedFrom!.userPictureUrl!.isNotEmpty
+                                      ? NetworkImage(importedFrom!.userPictureUrl!)
+                                      : null,
+                                  child: importedFrom!.userPictureUrl == null ||
+                                          importedFrom!.userPictureUrl!.isEmpty
+                                      ? Text(
+                                          (importedFrom!.userName.isNotEmpty
+                                                  ? importedFrom!.userName[0]
+                                                  : '?')
+                                              .toUpperCase(),
+                                          style: const TextStyle(fontSize: 12),
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    importedFrom!.userName,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Chip(
+                                  label: Text(
+                                    importedFrom!.status == 'planned'
+                                        ? 'Planned'
+                                        : 'Wishlist',
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                // Same session by name (id can differ across devices)
+                                if (_isSameSessionByName(plannedEvents, event.eventTitle)) ...[
+                                  const SizedBox(width: 8),
+                                  Chip(
+                                    label: const Text('Also in your journey', style: TextStyle(fontSize: 10)),
+                                    padding: EdgeInsets.zero,
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: VisualDensity.compact,
+                                    backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -322,6 +419,11 @@ class _TimelineEventCard extends StatelessWidget {
                           ),
                         ],
                       ),
+
+                      // Friends also attending (on MY event cards only)
+                      if (importedFrom == null && !isCandidate) ...[
+                        ..._buildFriendsAlsoAttending(context),
+                      ],
 
                       // Priority stars
                       const SizedBox(height: 8),
@@ -416,13 +518,13 @@ class _TimelineEventCard extends StatelessWidget {
                   ),
                 ),
 
-                // Actions
+                // Actions (imported events are read-only)
                 if (isCandidate)
                   _AddToCandidateButton(
                     event: event,
                     plannedEvents: plannedEvents,
                   )
-                else
+                else if (importedFrom == null)
                   PopupMenuButton<String>(
                   onSelected: (value) {
                     final bloc = context.read<JourneyBloc>();
@@ -538,6 +640,113 @@ class _TimelineEventCard extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  /// Compare by session/event name (id can differ across devices).
+  static bool _isSameSessionByName(List<JourneyItem> plannedEvents, String eventTitle) {
+    final normalized = eventTitle.trim().toLowerCase();
+    if (normalized.isEmpty) return false;
+    return plannedEvents.any((p) => p.eventTitle.trim().toLowerCase() == normalized);
+  }
+
+  /// Friends (imported users) who have this same session (by event name).
+  List<ImportedEventEntry> _friendsWithSameSession() {
+    final normalized = event.eventTitle.trim().toLowerCase();
+    if (normalized.isEmpty) return [];
+    final seen = <String>{};
+    return allImportedEntries
+        .where((e) => e.item.eventTitle.trim().toLowerCase() == normalized && seen.add(e.userName))
+        .toList();
+  }
+
+  List<Widget> _buildFriendsAlsoAttending(BuildContext context) {
+    final friends = _friendsWithSameSession();
+    if (friends.isEmpty) return [];
+    return [
+      const SizedBox(height: 10),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.secondary.withOpacity(0.4),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 18,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Friends also attending: ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                  ...friends.map((e) {
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          radius: 10,
+                          backgroundImage: e.userPictureUrl != null && e.userPictureUrl!.isNotEmpty
+                              ? NetworkImage(e.userPictureUrl!)
+                              : null,
+                          child: e.userPictureUrl == null || e.userPictureUrl!.isEmpty
+                              ? Text(
+                                  (e.userName.isNotEmpty ? e.userName[0] : '?').toUpperCase(),
+                                  style: const TextStyle(fontSize: 10),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          e.userName,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                        if (e.status == 'planned')
+                          Padding(
+                            padding: const EdgeInsets.only(left: 2),
+                            child: Icon(
+                              Icons.check_circle,
+                              size: 12,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.only(left: 2),
+                            child: Icon(
+                              Icons.bookmark_border,
+                              size: 12,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
   }
 
   Color _getConflictColor(BuildContext context, ConflictSeverity severity) {

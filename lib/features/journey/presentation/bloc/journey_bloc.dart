@@ -2,18 +2,27 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../data/datasources/local/database.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../data/daos/journey_items_dao.dart';
+import '../../data/services/journey_import_service.dart';
+import '../../domain/models/journey_export_model.dart';
 import '../../domain/models/journey_models.dart';
 import '../../domain/services/conflict_detector_service.dart';
 import 'journey_event.dart';
 import 'journey_state.dart';
 
+const String _kImportedJourneysKey = 'journey_imported_journeys';
+const String _kShowImportedJourneyKey = 'journey_show_imported';
+const String _kLastImportErrorKey = 'journey_last_import_error';
+
 class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
   final AppDatabase database;
   final NotificationService? notificationService;
+  final SharedPreferences sharedPreferences;
   late final JourneyItemsDao _dao;
+  final JourneyImportService _importService = JourneyImportService();
   JourneyPreferences _preferences = const JourneyPreferences();
   late final ConflictDetectorService _conflictDetector;
   StreamSubscription? _favoritesSubscription;
@@ -21,6 +30,7 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
   JourneyBloc({
     required this.database,
     this.notificationService,
+    required this.sharedPreferences,
   }) : super(const JourneyInitial()) {
     _dao = JourneyItemsDao(database);
     _conflictDetector = ConflictDetectorService(_preferences);
@@ -36,6 +46,10 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
     on<UpdateStatus>(_onUpdateStatus);
     on<DetectConflicts>(_onDetectConflicts);
     on<UpdatePreferences>(_onUpdatePreferences);
+    on<ImportJourneyFromUrl>(_onImportJourneyFromUrl);
+    on<RemoveImportedJourney>(_onRemoveImportedJourney);
+    on<SetShowImportedJourney>(_onSetShowImportedJourney);
+    on<ClearImportError>(_onClearImportError);
     
     // Listen to favorites changes and auto-reload
     _favoritesSubscription = database.eventsDao.watchFavoriteEvents().listen((favorites) {
@@ -50,6 +64,8 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
   }
 
   Future<void> _onLoadJourney(LoadJourney event, Emitter<JourneyState> emit) async {
+    final stateBeforeLoad = state;
+    print('[Journey] LoadJourney: stateBeforeLoad=${stateBeforeLoad.runtimeType}');
     try {
       emit(const JourneyLoading());
 
@@ -100,6 +116,24 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
       final conflicts = _conflictDetector.detectConflicts(journeyItems);
       final stats = _conflictDetector.calculateStats(journeyItems);
 
+      // Preserve imported journeys from state *before* we emitted Loading, or from persistence (e.g. app restart)
+      final prevLoaded = stateBeforeLoad is JourneyLoaded ? stateBeforeLoad : null;
+      Map<String, JourneyExportData> prevImported = prevLoaded?.importedJourneys ?? <String, JourneyExportData>{};
+      bool prevShow = prevLoaded?.showImportedJourney ?? true;
+      if (prevImported.isEmpty) {
+        final restored = _loadImportedJourneysFromPrefs();
+        prevImported = restored.$1;
+        prevShow = restored.$2;
+        print('[Journey] LoadJourney: restored from prefs: imported=${prevImported.length} keys=${prevImported.keys.toList()}, showImported=$prevShow');
+      } else {
+        print('[Journey] LoadJourney: keeping from state: imported=${prevImported.length} keys=${prevImported.keys.toList()}, showImported=$prevShow');
+      }
+
+      _saveImportedJourneysToPrefs(prevImported, prevShow);
+      final pendingImportError = sharedPreferences.getString(_kLastImportErrorKey);
+      if (pendingImportError != null) {
+        sharedPreferences.remove(_kLastImportErrorKey);
+      }
       emit(JourneyLoaded(
         wishlist: wishlist,
         planned: planned,
@@ -107,6 +141,9 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
         conflicts: conflicts,
         stats: stats,
         preferences: _preferences,
+        importedJourneys: prevImported,
+        showImportedJourney: prevShow,
+        importError: pendingImportError,
       ));
       
       // Schedule notifications for all journey items (wishlist + planned)
@@ -238,6 +275,105 @@ class JourneyBloc extends Bloc<JourneyEvent, JourneyState> {
     _preferences = event.preferences;
     _conflictDetector = ConflictDetectorService(_preferences);
     add(const DetectConflicts());
+  }
+
+  Future<void> _onImportJourneyFromUrl(ImportJourneyFromUrl event, Emitter<JourneyState> emit) async {
+    print('[Journey] ImportJourneyFromUrl: state=${state.runtimeType}, url=${event.url}');
+    final isLoaded = state is JourneyLoaded;
+    final current = isLoaded ? state as JourneyLoaded : null;
+    try {
+      final data = await _importService.importJourneyFromUrl(event.url);
+      final existing = current?.importedJourneys ?? _loadImportedJourneysFromPrefs().$1;
+      final key = _uniqueKeyForImported(existing, data.userName);
+      final updated = Map<String, JourneyExportData>.from(existing)..[key] = data;
+      final show = current?.showImportedJourney ?? true;
+      _saveImportedJourneysToPrefs(updated, show);
+      if (isLoaded && current != null) {
+        emit(current.copyWith(importedJourneys: updated, importError: null));
+        print('[Journey] ImportJourneyFromUrl: OK (loaded) key=$key userName=${data.userName} events=${data.events.length} totalImported=${updated.length}');
+      } else {
+        add(const LoadJourney());
+        print('[Journey] ImportJourneyFromUrl: OK (not loaded) saved to prefs, dispatching LoadJourney key=$key userName=${data.userName} events=${data.events.length}');
+      }
+    } on JourneyImportException catch (e) {
+      print('[Journey] ImportJourneyFromUrl: FAIL ${e.message}');
+      if (isLoaded && current != null) {
+        emit(current.copyWith(importError: e.message));
+      } else {
+        sharedPreferences.setString(_kLastImportErrorKey, e.message);
+        add(const LoadJourney());
+      }
+    }
+  }
+
+  String _uniqueKeyForImported(Map<String, JourneyExportData> existing, String userName) {
+    if (!existing.containsKey(userName)) return userName;
+    int suffix = 1;
+    while (existing.containsKey('$userName ($suffix)')) suffix++;
+    return '$userName ($suffix)';
+  }
+
+  Future<void> _onRemoveImportedJourney(RemoveImportedJourney event, Emitter<JourneyState> emit) async {
+    if (state is! JourneyLoaded) return;
+    final current = state as JourneyLoaded;
+    final updated = Map<String, JourneyExportData>.from(current.importedJourneys)..remove(event.key);
+    _saveImportedJourneysToPrefs(updated, current.showImportedJourney);
+    emit(current.copyWith(importedJourneys: updated));
+    print('[Journey] RemoveImportedJourney: key=${event.key} remaining=${updated.length}');
+  }
+
+  Future<void> _onSetShowImportedJourney(SetShowImportedJourney event, Emitter<JourneyState> emit) async {
+    if (state is! JourneyLoaded) return;
+    final current = state as JourneyLoaded;
+    _saveImportedJourneysToPrefs(current.importedJourneys, event.show);
+    emit(current.copyWith(showImportedJourney: event.show));
+  }
+
+  Future<void> _onClearImportError(ClearImportError event, Emitter<JourneyState> emit) async {
+    if (state is! JourneyLoaded) return;
+    final current = state as JourneyLoaded;
+    emit(current.copyWith(importError: null));
+  }
+
+  (Map<String, JourneyExportData>, bool) _loadImportedJourneysFromPrefs() {
+    try {
+      final jsonStr = sharedPreferences.getString(_kImportedJourneysKey);
+      if (jsonStr == null || jsonStr.isEmpty) {
+        print('[Journey] _loadImportedJourneysFromPrefs: no data');
+        return (<String, JourneyExportData>{}, true);
+      }
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>?;
+      if (map == null || map.isEmpty) {
+        print('[Journey] _loadImportedJourneysFromPrefs: empty map');
+        return (<String, JourneyExportData>{}, true);
+      }
+      final result = <String, JourneyExportData>{};
+      for (final entry in map.entries) {
+        if (entry.value is Map) {
+          result[entry.key] = JourneyExportData.fromJson(Map<dynamic, dynamic>.from(entry.value));
+        }
+      }
+      final show = sharedPreferences.getBool(_kShowImportedJourneyKey) ?? true;
+      print('[Journey] _loadImportedJourneysFromPrefs: loaded ${result.length} keys=${result.keys.toList()} show=$show');
+      return (result, show);
+    } catch (e, st) {
+      print('[Journey] _loadImportedJourneysFromPrefs: error $e $st');
+      return (<String, JourneyExportData>{}, true);
+    }
+  }
+
+  void _saveImportedJourneysToPrefs(Map<String, JourneyExportData> imported, bool show) {
+    try {
+      final map = <String, dynamic>{};
+      for (final e in imported.entries) {
+        map[e.key] = e.value.toJson();
+      }
+      sharedPreferences.setString(_kImportedJourneysKey, jsonEncode(map));
+      sharedPreferences.setBool(_kShowImportedJourneyKey, show);
+      print('[Journey] _saveImportedJourneysToPrefs: saved ${imported.length} keys=${imported.keys.toList()} show=$show');
+    } catch (e) {
+      print('[Journey] _saveImportedJourneysToPrefs: error $e');
+    }
   }
 
   List<JourneyItem> _convertToJourneyItems(List<JourneyItemWithEvent> items) {
