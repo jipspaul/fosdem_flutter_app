@@ -23,6 +23,9 @@ import '../../data/services/xcal_parser_service.dart';
 import '../../data/services/data_loading_service.dart';
 import '../../data/services/event_scraper_service.dart';
 import '../../data/services/xcal_monitor_service.dart';
+import '../../data/services/buildings_service.dart';
+import '../services/location_service.dart';
+import '../services/map_service.dart';
 import 'package:http/http.dart' as http;
 import '../../domain/usecases/get_events_usecase.dart';
 import '../../domain/usecases/search_events_usecase.dart';
@@ -144,6 +147,11 @@ Future<void> init() async {
       prefs: sl(),
     ),
   );
+
+  // Buildings, Location, Map (for map tab)
+  sl.registerLazySingleton<BuildingsService>(() => BuildingsService());
+  sl.registerLazySingleton<LocationService>(() => LocationService());
+  sl.registerLazySingleton<MapService>(() => MapService());
 
   // Data Loading Service
   sl.registerLazySingleton<DataLoadingService>(

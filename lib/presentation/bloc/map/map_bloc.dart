@@ -11,12 +11,12 @@ part 'map_state.dart';
 class MapBloc extends Bloc<MapEvent, MapState> {
   final LocationService locationService;
   final MapService mapService;
-  final List<Building> buildings;
+  final Future<List<Building>> Function()? loadBuildings;
 
   MapBloc({
     required this.locationService,
     required this.mapService,
-    this.buildings = const [],
+    this.loadBuildings,
   }) : super(MapInitial()) {
     on<LoadMapData>(_onLoadMapData);
     on<UpdateUserLocation>(_onUpdateUserLocation);
@@ -29,8 +29,9 @@ class MapBloc extends Bloc<MapEvent, MapState> {
   Future<void> _onLoadMapData(LoadMapData event, Emitter<MapState> emit) async {
     emit(MapLoading());
     try {
-      // For now, use provided buildings or empty list
-      // In future, this will load from repository
+      final buildings = loadBuildings != null
+          ? await loadBuildings!()
+          : <Building>[];
       emit(MapLoaded(
         buildings: buildings,
         center: MapService.fosdemCenter,
@@ -83,10 +84,19 @@ class MapBloc extends Bloc<MapEvent, MapState> {
     EnableLocationTracking event,
     Emitter<MapState> emit,
   ) async {
-    if (state is MapLoaded) {
+    if (state is! MapLoaded) return;
+    try {
       final hasPermission = await locationService.requestLocationPermission();
       if (!hasPermission) {
-        emit(MapError('Location permission denied'));
+        final deniedForever =
+            await locationService.isPermissionDeniedForever();
+        if (deniedForever) {
+          emit(MapError(
+              'Location was denied. You can enable it in your device Settings.'));
+        } else {
+          emit(MapError(
+              'Location permission denied. Please allow access when prompted.'));
+        }
         return;
       }
 
@@ -108,6 +118,8 @@ class MapBloc extends Bloc<MapEvent, MapState> {
           return MapError('Location tracking error: $error');
         },
       );
+    } catch (e) {
+      emit(MapError('Location error: $e'));
     }
   }
 

@@ -1,16 +1,29 @@
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
   Stream<Position>? _positionStream;
 
+  /// Request location permission using Geolocator so the native iOS/Android
+  /// permission dialog is shown. Returns true if granted (whileInUse or always).
   Future<bool> requestLocationPermission() async {
-    final status = await Permission.location.request();
-    return status.isGranted;
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      // This triggers the system "Allow location?" dialog on iOS and Android
+      permission = await Geolocator.requestPermission();
+    }
+    return permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+  }
+
+  /// True if user previously chose "Don't allow" and the system won't show the dialog again.
+  Future<bool> isPermissionDeniedForever() async {
+    return await Geolocator.checkPermission() == LocationPermission.deniedForever;
   }
 
   Future<bool> checkLocationPermission() async {
-    return await Permission.location.isGranted;
+    final permission = await Geolocator.checkPermission();
+    return permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
   }
 
   Future<Position?> getCurrentLocation() async {

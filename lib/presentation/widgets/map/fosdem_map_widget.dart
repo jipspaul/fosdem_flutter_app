@@ -3,12 +3,21 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../domain/entities/building.dart';
 
+/// A single path segment to draw on the map (e.g. to next meeting).
+class MapRoutePolyline {
+  final List<LatLng> points;
+  final bool isBold; // true = journey (bold), false = favorite (grey)
+
+  const MapRoutePolyline({required this.points, this.isBold = true});
+}
+
 class FosdemMapWidget extends StatefulWidget {
   final LatLng center;
   final double zoom;
   final List<Building> buildings;
   final Building? selectedBuilding;
   final LatLng? userLocation;
+  final List<MapRoutePolyline> routePolylines;
   final Function(Building)? onBuildingTap;
   final VoidCallback? onLocationButtonPressed;
   final bool showLocationButton;
@@ -20,6 +29,7 @@ class FosdemMapWidget extends StatefulWidget {
     required this.buildings,
     this.selectedBuilding,
     this.userLocation,
+    this.routePolylines = const [],
     this.onBuildingTap,
     this.onLocationButtonPressed,
     this.showLocationButton = true,
@@ -152,6 +162,18 @@ class _FosdemMapWidgetState extends State<FosdemMapWidget> {
                     ),
                   ),
                 ],
+              ),
+            if (widget.routePolylines.isNotEmpty)
+              PolylineLayer(
+                polylines: widget.routePolylines.map((r) {
+                  return Polyline(
+                    points: r.points,
+                    color: r.isBold
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey,
+                    strokeWidth: r.isBold ? 5.0 : 3.0,
+                  );
+                }).toList(),
               ),
           ],
         ),

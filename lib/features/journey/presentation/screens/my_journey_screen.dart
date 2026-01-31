@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/di/injection_container.dart' as di;
 import '../../domain/models/journey_models.dart';
 import '../../domain/models/journey_export_model.dart';
 import '../bloc/journey_bloc.dart';
@@ -26,11 +28,22 @@ class _MyJourneyScreenState extends State<MyJourneyScreen> with SingleTickerProv
   late TabController _tabController;
   bool _showFavorites = true;
 
+  static const _prefKeyShowFavorites = 'journey_show_favorites';
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     context.read<JourneyBloc>().add(const LoadJourney());
+    _loadShowFavorites();
+  }
+
+  Future<void> _loadShowFavorites() async {
+    final prefs = di.sl<SharedPreferences>();
+    final saved = prefs.getBool(_prefKeyShowFavorites);
+    if (saved != null && mounted) {
+      setState(() => _showFavorites = saved);
+    }
   }
 
   @override
@@ -347,10 +360,10 @@ class _MyJourneyScreenState extends State<MyJourneyScreen> with SingleTickerProv
                       : 'Only planned events are shown',
                   ),
                   value: _showFavorites,
-                  onChanged: (value) {
-                    setState(() {
-                      _showFavorites = value;
-                    });
+                  onChanged: (value) async {
+                    setState(() => _showFavorites = value);
+                    final prefs = di.sl<SharedPreferences>();
+                    await prefs.setBool(_prefKeyShowFavorites, value);
                   },
                   secondary: Icon(
                     _showFavorites ? Icons.bookmark : Icons.bookmark_border,

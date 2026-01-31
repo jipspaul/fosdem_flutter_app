@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/models/building.dart';
@@ -7,11 +10,20 @@ import '../../domain/entities/event.dart';
 import '../../data/services/buildings_service.dart';
 import '../../data/datasources/local/database.dart';
 import '../../core/di/injection_container.dart' as di;
+import '../../core/services/location_service.dart';
 import '../bloc/favorites/favorites_bloc.dart';
 import '../bloc/favorites/favorites_state.dart';
 import '../../features/journey/presentation/bloc/journey_bloc.dart';
 import '../../features/journey/presentation/bloc/journey_state.dart';
+import '../../features/journey/domain/models/journey_models.dart';
 import 'event_detail_screen.dart';
+
+/// One "next meeting" entry: from journey (bold) or favorite (grey).
+class _NextMeetingItem {
+  final JourneyItem item;
+  final bool isFromJourney;
+  _NextMeetingItem(this.item, {required this.isFromJourney});
+}
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -23,11 +35,22 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final BuildingsService _buildingsService = BuildingsService();
+  late final LocationService _locationService = di.sl<LocationService>();
   List<Building> _buildings = [];
   Building? _selectedBuilding;
   bool _isLoading = true;
   List<Event> _buildingEvents = [];
   bool _loadingEvents = false;
+  bool _nextMeetingsExpanded = false;
+  LatLng? _userLocation;
+  bool _isTrackingLocation = false;
+  StreamSubscription<Position>? _locationSubscription;
+  /// Route line from current position (or last meeting) to the selected next meeting building.
+  List<LatLng>? _routeToMeeting;
+  /// When set, destination is highlighted on map but no bottom sheet (itinerary-only mode).
+  Building? _destinationBuildingForRoute;
+  /// User heading in degrees (0 = north, 90 = east) for the position arrow; null if not available.
+  double? _userHeading;
 
   // FOSDEM location: ULB Campus du Solbosch, Brussels
   static const LatLng fosdemLocation = LatLng(50.8145, 4.3817);
@@ -40,6 +63,38 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _loadBuildings();
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _toggleLocationTracking() async {
+    if (_isTrackingLocation) {
+      _locationSubscription?.cancel();
+      _locationSubscription = null;
+      if (mounted) setState(() { _isTrackingLocation = false; _userLocation = null; _userHeading = null; });
+      return;
+    }
+    final granted = await _locationService.requestLocationPermission();
+    if (!granted || !mounted) return;
+    setState(() => _isTrackingLocation = true);
+    final position = await _locationService.getCurrentLocation();
+    if (position != null && mounted) {
+      setState(() {
+        _userLocation = LatLng(position.latitude, position.longitude);
+        _userHeading = position.heading;
+      });
+      _mapController.move(_userLocation!, 17.0);
+    }
+    _locationSubscription = _locationService.watchLocation().listen((Position position) {
+      if (mounted) setState(() {
+        _userLocation = LatLng(position.latitude, position.longitude);
+        _userHeading = position.heading;
+      });
+    });
   }
 
   Future<void> _loadBuildings() async {
@@ -67,25 +122,48 @@ class _MapScreenState extends State<MapScreen> {
       appBar: AppBar(
         title: const Text('FOSDEM Campus Map'),
         actions: [
-          if (_selectedBuilding != null)
+          if (_selectedBuilding != null || _destinationBuildingForRoute != null)
             IconButton(
               icon: const Icon(Icons.close),
-              onPressed: () => setState(() => _selectedBuilding = null),
+              onPressed: () => setState(() {
+                _selectedBuilding = null;
+                _destinationBuildingForRoute = null;
+                _routeToMeeting = null;
+              }),
+              tooltip: 'Close sheet / clear route',
             ),
           IconButton(
-            icon: const Icon(Icons.my_location),
-            onPressed: () {
-              _mapController.move(fosdemLocation, 17.0);
+            icon: Icon(_isTrackingLocation ? Icons.location_on : Icons.my_location),
+            onPressed: () async {
+              if (_isTrackingLocation) {
+                await _toggleLocationTracking();
+              } else {
+                await _toggleLocationTracking();
+              }
             },
-            tooltip: 'Center on FOSDEM',
+            tooltip: _isTrackingLocation ? 'Stop GPS' : 'Show my location (GPS)',
+          ),
+          IconButton(
+            icon: const Icon(Icons.center_focus_strong),
+            onPressed: () {
+              if (_userLocation != null) {
+                _mapController.move(_userLocation!, 17.0);
+              } else {
+                _mapController.move(fosdemLocation, 17.0);
+              }
+            },
+            tooltip: 'Center on my location or FOSDEM',
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Stack(
+          : Column(
               children: [
-                FlutterMap(
+                Expanded(
+                  child: Stack(
+                    children: [
+                      FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
                     initialCenter: fosdemLocation,
@@ -99,7 +177,11 @@ class _MapScreenState extends State<MapScreen> {
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all,
                     ),
-                    onTap: (_, __) => setState(() => _selectedBuilding = null),
+                    onTap: (_, __) => setState(() {
+                      _selectedBuilding = null;
+                      _destinationBuildingForRoute = null;
+                      _routeToMeeting = null;
+                    }),
                   ),
                   children: [
                     TileLayer(
@@ -115,7 +197,7 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     PolygonLayer(
                       polygons: _buildings.map((building) {
-                        final isSelected = _selectedBuilding == building;
+                        final isSelected = _selectedBuilding == building || _destinationBuildingForRoute == building;
                         return Polygon(
                           points: building.polygon,
                           color: isSelected
@@ -139,7 +221,7 @@ class _MapScreenState extends State<MapScreen> {
                             },
                             child: Container(
                               decoration: BoxDecoration(
-                                color: _selectedBuilding == building
+                                color: (_selectedBuilding == building || _destinationBuildingForRoute == building)
                                     ? Colors.blue
                                     : Colors.white,
                                 shape: BoxShape.circle,
@@ -161,7 +243,7 @@ class _MapScreenState extends State<MapScreen> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
-                                    color: _selectedBuilding == building
+                                    color: (_selectedBuilding == building || _destinationBuildingForRoute == building)
                                         ? Colors.white
                                         : Colors.black,
                                   ),
@@ -172,6 +254,37 @@ class _MapScreenState extends State<MapScreen> {
                         );
                       }).toList(),
                     ),
+                    if (_userLocation != null)
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: _userLocation!,
+                            width: 48,
+                            height: 48,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.3),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.blue, width: 3),
+                              ),
+                              child: Transform.rotate(
+                                angle: (_userHeading ?? 0) * math.pi / 180,
+                                child: const Icon(Icons.navigation, color: Colors.blue, size: 28),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (_routeToMeeting != null && _routeToMeeting!.length >= 2)
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: _routeToMeeting!,
+                            color: Theme.of(context).colorScheme.primary,
+                            strokeWidth: 5.0,
+                          ),
+                        ],
+                      ),
                     RichAttributionWidget(
                       attributions: [
                         TextSourceAttribution(
@@ -183,6 +296,12 @@ class _MapScreenState extends State<MapScreen> {
                   ],
                 ),
                 if (_selectedBuilding != null) _buildBuildingInfo(),
+                    ],
+                  ),
+                ),
+                BlocBuilder<JourneyBloc, JourneyState>(
+                  builder: (context, journeyState) => _buildNextMeetingsBar(),
+                ),
               ],
             ),
       floatingActionButton: _isLoading
@@ -374,6 +493,193 @@ class _MapScreenState extends State<MapScreen> {
     return '$hour:$minute';
   }
 
+  /// Next 30 min (max 5); if none, then next 5 upcoming from journey + favorites.
+  List<_NextMeetingItem> _computeNextMeetings() {
+    final journeyState = context.read<JourneyBloc>().state;
+    if (journeyState is! JourneyLoaded) return [];
+    final now = DateTime.now();
+    final endWindow30 = now.add(const Duration(minutes: 30));
+    final plannedIn30 = journeyState.planned
+        .where((i) =>
+            !i.startTime.isBefore(now) && i.startTime.isBefore(endWindow30))
+        .map((i) => _NextMeetingItem(i, isFromJourney: true));
+    final candidatesIn30 = journeyState.candidates
+        .where((i) =>
+            !i.startTime.isBefore(now) && i.startTime.isBefore(endWindow30))
+        .map((i) => _NextMeetingItem(i, isFromJourney: false));
+    var combined = <_NextMeetingItem>[...plannedIn30, ...candidatesIn30]
+      ..sort((a, b) => a.item.startTime.compareTo(b.item.startTime));
+    if (combined.isEmpty) {
+      final plannedUpcoming = journeyState.planned
+          .where((i) => !i.startTime.isBefore(now))
+          .map((i) => _NextMeetingItem(i, isFromJourney: true));
+      final candidatesUpcoming = journeyState.candidates
+          .where((i) => !i.startTime.isBefore(now))
+          .map((i) => _NextMeetingItem(i, isFromJourney: false));
+      combined = <_NextMeetingItem>[...plannedUpcoming, ...candidatesUpcoming]
+        ..sort((a, b) => a.item.startTime.compareTo(b.item.startTime));
+    }
+    return combined.take(5).toList();
+  }
+
+  Building? _buildingForJourneyItem(String buildingId) {
+    final upper = buildingId.toUpperCase();
+    try {
+      return _buildings.firstWhere((b) =>
+          b.title.toUpperCase() == upper ||
+          b.title.toUpperCase().startsWith(upper) ||
+          upper.startsWith(b.title.toUpperCase()));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Start point for itinerary: user location, or last meeting on journey, or FOSDEM center.
+  LatLng _routeFromPoint() {
+    if (_userLocation != null) return _userLocation!;
+    final journeyState = context.read<JourneyBloc>().state;
+    if (journeyState is JourneyLoaded && journeyState.planned.isNotEmpty) {
+      final now = DateTime.now();
+      final pastOrCurrent = journeyState.planned
+          .where((i) =>
+              i.endTime.isBefore(now) ||
+              (i.startTime.isBefore(now) && i.endTime.isAfter(now)))
+          .toList();
+      if (pastOrCurrent.isNotEmpty) {
+        pastOrCurrent.sort((a, b) => b.endTime.compareTo(a.endTime));
+        return pastOrCurrent.first.location;
+      }
+    }
+    return fosdemLocation;
+  }
+
+  Widget _buildNextMeetingsBar() {
+    final nextMeetings = _computeNextMeetings();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 6,
+            offset: const Offset(0, -2),
+          ),
+        ],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _nextMeetingsExpanded = !_nextMeetingsExpanded;
+                });
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.event_available,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Go to next meeting',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    if (nextMeetings.isNotEmpty)
+                      Text(
+                        ' (${nextMeetings.length})',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: Colors.grey,
+                            ),
+                      ),
+                    const Spacer(),
+                    Icon(
+                      _nextMeetingsExpanded
+                          ? Icons.expand_more
+                          : Icons.expand_less,
+                      size: 24,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_nextMeetingsExpanded && nextMeetings.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'No upcoming meetings. Add events to your journey or favorites.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          if (_nextMeetingsExpanded && nextMeetings.isNotEmpty)
+            ...nextMeetings.map((m) {
+              final timeStr =
+                  '${m.item.startTime.hour.toString().padLeft(2, '0')}:${m.item.startTime.minute.toString().padLeft(2, '0')}';
+              return ListTile(
+                dense: true,
+                leading: Icon(
+                  m.isFromJourney ? Icons.route : Icons.favorite_border,
+                  size: 20,
+                  color: m.isFromJourney
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey,
+                ),
+                title: Text(
+                  m.item.eventTitle,
+                  style: m.isFromJourney
+                      ? Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          )
+                      : Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey,
+                          ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '$timeStr · ${m.item.room}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                onTap: () {
+                  final building =
+                      _buildingForJourneyItem(m.item.building);
+                  if (building != null) {
+                    final from = _routeFromPoint();
+                    final to = building.coordinate;
+                    setState(() {
+                      _selectedBuilding = null;
+                      _buildingEvents = [];
+                      _destinationBuildingForRoute = building;
+                      _routeToMeeting = [from, to];
+                    });
+                    // Center map to show route; bottom sheet stays closed so map is visible
+                    final midLat = (from.latitude + to.latitude) / 2;
+                    final midLng = (from.longitude + to.longitude) / 2;
+                    _mapController.move(LatLng(midLat, midLng), 16.5);
+                  }
+                },
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
   Future<void> _loadEventsForBuilding(Building building) async {
     setState(() {
       _loadingEvents = true;
@@ -387,15 +693,16 @@ class _MapScreenState extends State<MapScreen> {
       
       // Convert EventEntity to Event and filter by building
       final buildingPrefix = building.title.toUpperCase();
-      
+      final firstLetter = buildingPrefix.isNotEmpty ? buildingPrefix.substring(0, 1) : '';
       final eventsInBuilding = allEvents
           .where((eventEntity) {
-            // Check if room starts with building name
-            // e.g., "K.1.105" starts with "K"
+            // Check if room starts with building name or first letter (e.g. "J.1.105" for "Janson")
             final room = eventEntity.room.toUpperCase();
             return room.startsWith('$buildingPrefix.') ||
                    room.startsWith(buildingPrefix) ||
-                   room == buildingPrefix;
+                   room == buildingPrefix ||
+                   room.startsWith('$firstLetter.') ||
+                   room == firstLetter;
           })
           .map((eventEntity) => Event(
                 id: eventEntity.id,

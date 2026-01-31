@@ -113,19 +113,58 @@ class JourneyTimelineWidget extends StatelessWidget {
     
     allItems.sort((a, b) => a.item.startTime.compareTo(b.item.startTime));
     
+    final now = DateTime.now();
+    final pastItems = allItems.where((x) => x.item.endTime.isBefore(now)).toList();
+    final upcomingItems = allItems.where((x) => !x.item.endTime.isBefore(now)).toList();
+    
     final widgets = <Widget>[];
     
-    for (int i = 0; i < allItems.length; i++) {
-      final current = allItems[i];
-      final isLast = i == allItems.length - 1;
-      
+    if (pastItems.isNotEmpty) {
+      widgets.add(
+        ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: EdgeInsets.zero,
+          title: Row(
+            children: [
+              Icon(
+                Icons.history,
+                size: 20,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Past events (${pastItems.length})',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          children: _buildCardsForItems(context, pastItems),
+        ),
+      );
+    }
+    
+    widgets.addAll(_buildCardsForItems(context, upcomingItems));
+    return widgets;
+  }
+
+  List<Widget> _buildCardsForItems(
+    BuildContext context,
+    List<({JourneyItem item, bool isCandidate, ImportedEventEntry? imported})> items,
+  ) {
+    final result = <Widget>[];
+    for (int i = 0; i < items.length; i++) {
+      final current = items[i];
+      final isLast = i == items.length - 1;
       Duration? breakDuration;
       if (!isLast) {
-        final next = allItems[i + 1];
+        final next = items[i + 1];
         breakDuration = next.item.startTime.difference(current.item.endTime);
       }
-      
-      widgets.add(
+      result.add(
         _TimelineEventCard(
           event: current.item,
           isCandidate: current.isCandidate,
@@ -139,8 +178,7 @@ class JourneyTimelineWidget extends StatelessWidget {
         ),
       );
     }
-    
-    return widgets;
+    return result;
   }
 }
 

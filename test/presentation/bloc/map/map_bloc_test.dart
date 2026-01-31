@@ -55,7 +55,6 @@ void main() {
       build: () => MapBloc(
         locationService: mockLocationService,
         mapService: mockMapService,
-        buildings: testBuildings,
       ),
       act: (bloc) => bloc.add(LoadMapData()),
       expect: () => [
@@ -72,7 +71,6 @@ void main() {
       build: () => MapBloc(
         locationService: mockLocationService,
         mapService: mockMapService,
-        buildings: testBuildings,
       ),
       seed: () => MapLoaded(
         buildings: testBuildings,
@@ -93,7 +91,6 @@ void main() {
       build: () => MapBloc(
         locationService: mockLocationService,
         mapService: mockMapService,
-        buildings: testBuildings,
       ),
       seed: () => MapLoaded(
         buildings: testBuildings,
@@ -112,7 +109,6 @@ void main() {
       build: () => MapBloc(
         locationService: mockLocationService,
         mapService: mockMapService,
-        buildings: testBuildings,
       ),
       seed: () => MapLoaded(
         buildings: testBuildings,
@@ -134,7 +130,6 @@ void main() {
       build: () => MapBloc(
         locationService: mockLocationService,
         mapService: mockMapService,
-        buildings: testBuildings,
       ),
       seed: () => MapLoaded(
         buildings: testBuildings,
